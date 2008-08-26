@@ -188,11 +188,12 @@ echo <<<EOP
     <script type="text/javascript" src="js/setfavjs.js?v=20061206"></script>
     <script type="text/javascript" src="js/delelog.js?v=20061206"></script>
     
-	<script type="text/javascript" src="./js/yui-ext/yui.js"></script>
+EOP;
+/*
+<script type="text/javascript" src="./js/yui-ext/yui.js"></script>
 	<script type="text/javascript" src="./js/yui-ext/yui-ext-nogrid.js"></script>
 	<link rel="stylesheet" type="text/css" href="./js/yui-ext/resources/css/resizable.css">\n
-EOP;
-
+*/
 $onload_script = "";
 
 if ($_conf['bottom_res_form']) {

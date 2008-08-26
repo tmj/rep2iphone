@@ -1,6 +1,6 @@
 <?php
-require_once P2_IPHONE_LIB_DIR . '/showthread.class.php';
-require_once 'StrSjis.php';
+require_once P2_LIB_DIR . '/showthread.class.php';
+require_once P2_LIB_DIR . '/StrSjis.php';
 
 /**
  * p2 - 携帯用にスレッドを表示するクラス

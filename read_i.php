@@ -6,12 +6,12 @@
 
 require_once './conf/conf.inc.php';
 require_once './iphone/conf.inc.php';
-
+$_conf['ktai']          = true;
 require_once P2_LIB_DIR . '/thread.class.php';
 require_once P2_LIB_DIR . '/threadread.class.php';
 require_once P2_LIB_DIR . '/filectl.class.php';
 require_once P2_LIB_DIR . '/ngabornctl.class.php';
-require_once P2_IPHONE_LIB_DIR . '/showthread.class.php';
+require_once P2_LIB_DIR . '/showthread.class.php';
 
 $_login->authorize(); // ユーザ認証
 
@@ -186,7 +186,6 @@ if (!empty($_GET['onlyone'])) {
     $body = $aThread->previewOne();
     $ptitle_ht = htmlspecialchars($aThread->itaj, ENT_QUOTES) . " / " . $aThread->ttitle_hd;
 
-    
     // PC
     if (empty($GLOBALS['_conf']['ktai'])) {
         $read_header_inc_php = P2_LIB_DIR . '/read_header.inc.php';
@@ -277,7 +276,6 @@ $aThread->lsToPoint();
 // HTMLプリント
 //===============================================================
 $ptitle_ht = htmlspecialchars($aThread->itaj, ENT_QUOTES) . " / " . $aThread->ttitle_hd;
-
 if ($_conf['ktai']) {
 
     if (isset($GLOBALS['word']) && strlen($GLOBALS['word']) > 0) {

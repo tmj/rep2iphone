@@ -208,7 +208,7 @@ EOP;
 // ŒŸõ‚Ì“Á•Ê‚Èˆ—
 //====================================================================
 if ($filter_hits !== NULL) {
-    include P2_LIB_DIR . '/read_filter_i.inc.php';
+    include P2_IPHONE_LIB_DIR . '/read_filter_k.inc.php';
     resetReadNaviHeaderK();
 }
 
@@ -265,8 +265,8 @@ echo <<<EOHEADER
     <meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
 	<meta name="viewport" content="width=320; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;"/>
 	<script type="text/javascript" src="js/basic.js?v=20061209"></script>
-	<script type="text/javascript" src="js/respopup.iPhone.js?v=20061206"></script>
-	<script type="text/javascript" src="js/setfavjs.js?v=20061206"></script>
+	<script type="text/javascript" src="iphone/js/respopup.iPhone.js?v=20061206"></script>
+	<script type="text/javascript" src="iphone/js/setfavjs.js?v=20061206"></script>
 	<script type="text/javascript" src="js/post_form.js?v=20061209"></script>
     <script type="text/javascript"> 
 	<!-- 
@@ -351,7 +351,7 @@ $existWord = (strlen($GLOBALS['word']) > 0) ? 'true' : 'false';
 
 
 if ($_conf['enable_spm']) {
-    echo "\t<script type=\"text/javascript\" src=\"js/smartpopup.iPhone.js?v=20070308\"></script>\n";
+    echo "\t<script type=\"text/javascript\" src=\"iphone/js/smartpopup.iPhone.js?v=20070308\"></script>\n";
 }
 
 echo <<<EOP
