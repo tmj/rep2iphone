@@ -434,7 +434,7 @@ EOP;
     $GLOBALS['newres_to_show_flag'] = false;
     if ($aThread->rescount) {
         //$aThread->datToHtml(); // dat ‚ð html ‚É•ÏŠ·•\Ž¦
-        require_once P2_IPHONE_LIB_DIR . '/showthread.class.php';
+        require_once P2_LIB_DIR . '/showthread.class.php';
         require_once P2_IPHONE_LIB_DIR . '/showthreadk.class.php';
         $aShowThread =& new ShowThreadK($aThread);
         
