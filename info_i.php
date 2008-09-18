@@ -7,7 +7,7 @@
 //require_once P2_LIB_DIR . '/thread.class.php';
 //require_once P2_LIB_DIR . '/filectl.class.php';
 require_once P2_LIB_DIR . '/dele.inc.php'; // 削除処理用の関数郡
-
+$_conf['k_at_a'] = '&b=k';
 $_login->authorize(); // ユーザ認証
 
 //================================================================
@@ -156,7 +156,7 @@ $favmark_ht = "<span class=\"fav\">$favmark</span>";
 $favdo = $aThread->fav ? 0 : 1;
 
 $fav_ht = <<<EOP
-<a href="info_i.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;setfav={$favdo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}" >{$favmark_ht}</a>
+<a href="info.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;setfav={$favdo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}" >{$favmark_ht}</a>
 EOP;
 
 // }}}
@@ -180,7 +180,7 @@ if ($pallines = @file($palace_idx)) {
 
 $paldo = $isPalace ? 0 : 1;
 
-$pal_a_ht = "info_i.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;setpal={$paldo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}";
+$pal_a_ht = "info.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;setpal={$paldo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}";
 
 if ($isPalace) {
     $pal_ht = "<a href=\"{$pal_a_ht}\" title=\"DAT落ちしたスレ用のお気に入り\">★</a>";
@@ -219,7 +219,7 @@ if (!empty($isTaborn)) {
 }
 
 $taborn_ht = <<<EOP
-{$tastr1} [<a href="info_i.php?host={$aThread->host}&bbs={$aThread->bbs}&key={$aThread->key}&amp;taborn={$taborndo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}"{$taborndo_title_at}>{$tastr2}</a>]
+{$tastr1} [<a href="info.php?host={$aThread->host}&bbs={$aThread->bbs}&key={$aThread->key}&amp;taborn={$taborndo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}"{$taborndo_title_at}>{$tastr2}</a>]
 EOP;
 
 // }}}
@@ -310,7 +310,7 @@ if ($_conf['ktai']) {
 }
 
 if (checkRecent($aThread->host, $aThread->bbs, $aThread->key) or checkResHist($aThread->host, $aThread->bbs, $aThread->key)) {
-    $offrec_ht = " / [<a href=\"info_i.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;offrec=true{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}\" title=\"このスレを「最近読んだスレ」と「書き込み履歴」から外します\">履歴から外す</a>]";
+    $offrec_ht = " / [<a href=\"info.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;offrec=true{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}\" title=\"このスレを「最近読んだスレ」と「書き込み履歴」から外します\">履歴から外す</a>]";
 }
 
 
@@ -325,7 +325,7 @@ printInfoTrHtml("板", "<a href=\"{$_conf['subject_php']}?host={$aThread->host}&a
 //printInfoTrHtml("key", $aThread->key);
 
 if ($existLog) {
-    printInfoTrHtml("ログ", "あり [<a href=\"info_i.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;dele=true{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}\">削除する</a>]{$offrec_ht}");
+    printInfoTrHtml("ログ", "あり [<a href=\"info.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;dele=true{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}\">削除する</a>]{$offrec_ht}");
 } else {
     printInfoTrHtml("ログ", "未取得{$offrec_ht}");
 }

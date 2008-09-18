@@ -155,7 +155,12 @@ if (!empty($_POST['maru_kakiko']) and P2Util::isHost2chs($host) && file_exists($
 // }}}
 
 // 2006/05/27 新仕様？
-$post['hana'] = 'mogera';
+//$post['hana'] = 'mogera';
+foreach ($_POST as $k => $v) { 
+    if (!isset($post[$k]) and !in_array($k, $post_keys)) { 
+        $post[$k] = $_POST[$k]; 
+    } 
+} 
 
 if (!empty($_POST['newthread'])) {
     $ptitle = "p2 - 新規スレッド作成";

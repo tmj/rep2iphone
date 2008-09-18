@@ -13,7 +13,7 @@ function setFavJsNoStr(tquery, favdo, info_pop_width, info_pop_height, page, obj
 	if (!objHTTP) {
 		// alert("Error: XMLHTTP 通信オブジェクトの作成に失敗しました。") ;
 		// XMLHTTP（とinnerHTML） に未対応なら小窓で
-		infourl = 'info.php?' + tquery + '&setfav=' + favdo + '&popup=2';
+		infourl = 'info_i.php?' + tquery + '&setfav=' + favdo + '&popup=2';
 		return !openSubWin(infourl,info_pop_width,info_pop_height,0,0);
 	}
 
@@ -45,7 +45,7 @@ function setFavJsNoStr(tquery, favdo, info_pop_width, info_pop_height, page, obj
 			} else {
 				favstr = '';
 			}
-			var favhtm = '<a id="'+numb+'"' + objClass + ' href="info.php?' + tquery + '&amp;setfav=' + nextset + '" target="info" onClick="return setFavJsNoStr(\'' + tquery + '\', \''+nextset+'\', '+info_pop_width+', '+info_pop_height+', \'' + page + '\', this, \''+numb+ '\');" title="' + favtitle + '">' + favstr + favmark + '</a>';
+			var favhtm = '<a id="'+numb+'"' + objClass + ' href="info_i.php?' + tquery + '&amp;setfav=' + nextset + '" target="info" onClick="return setFavJsNoStr(\'' + tquery + '\', \''+nextset+'\', '+info_pop_width+', '+info_pop_height+', \'' + page + '\', this, \''+numb+ '\');" title="' + favtitle + '">' + favstr + favmark + '</a>';
 			if (page != 'read') {
 				obj.parentNode.innerHTML = favhtm;
 			} else {
