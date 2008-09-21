@@ -287,8 +287,9 @@ echo <<<EOHEADER
 	    var onArreyt = 2;
 	    function formReset() {
 		    var uriValue = "{$_conf['read_php']}?"
-		    			 + "offline=1&"
-		    			 + "b=" + document.frmresrange.b.value + "&"
+                          + "offline=1&"
+                          //+ "b=" + document.frmresrange.b.value + "&"
+                         + "b=k&"
 		    			 + "host=" + document.frmresrange.host.value + "&"
 		    			 + "bbs=" + document.frmresrange.bbs.value + "&"
 		    			 + "key=" + document.frmresrange.key.value + "&"
