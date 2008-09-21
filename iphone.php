@@ -18,7 +18,12 @@ makeDenyHtaccess($_conf['idx_dir']);
 $me_url = P2Util::getMyUrl();
 $me_dir_url = dirname($me_url);
 
-require_once P2_IPHONE_LIB_DIR . '/index_print_k.inc.php';
+if($_GET['i']){
+    require_once P2_IPHONE_LIB_DIR . '/index_print_i.inc.php';
+}else{
+    require_once P2_IPHONE_LIB_DIR . '/index_print_k.inc.php';
+}
+
 index_print_k();
 //============================================================================
 // 関数（このファイル内でのみ利用）

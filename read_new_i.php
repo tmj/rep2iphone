@@ -132,8 +132,8 @@ EOHEADER;
 
 echo <<<EOHEADER
     <script type="text/javascript" src="js/basic.js?v=20061209"></script>
-	<script type="text/javascript" src="js/respopup.iPhone.js?v=20061206"></script>
-	<script type="text/javascript" src="js/setfavjs.js?v=20061206"></script>
+	<script type="text/javascript" src="iphone/js/respopup.iPhone.js?v=20061206"></script>
+	<script type="text/javascript" src="iphone/js/setfavjs.js?v=20061206"></script>
 	<script type="text/javascript" src="js/post_form.js?v=20061209"></script>
 <script type="text/javascript" src="js/smartpopup.js?v=20070308"></script>
     <script type="text/javascript"> 
@@ -156,7 +156,7 @@ echo <<<EOHEADER
 	    function formReset() {
 		    var uriValue = "{$_conf['read_php']}?"
 		    			 + "offline=1&"
-		    			 + "b=" + document.frmresrange.b.value + "&"
+		    			 + "b=k&"
 		    			 + "host=" + document.frmresrange.host.value + "&"
 		    			 + "bbs=" + document.frmresrange.bbs.value + "&"
 		    			 + "key=" + document.frmresrange.key.value + "&"
@@ -531,7 +531,7 @@ echo <<<EOP
 <div id="footbar01">
 <div class="footbar">
 <ul>
-<li class="home"><a href="iphone.php">TOP</a></li>
+<li class="home"><a name="ntt_bt1" href="iphone.php">TOP</a></li>
 <li class="other"><a onclick="all.item('footbar02').style.visibility='visible';">‚»‚Ì‘¼</a></li>
 EOP;
 if (!isset($GLOBALS['rnum_all_range']) or $GLOBALS['rnum_all_range'] > 0 or !empty($GLOBALS['limit_to_eq_to'])) {
