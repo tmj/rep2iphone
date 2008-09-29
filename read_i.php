@@ -9,10 +9,9 @@ require_once './iphone/conf.inc.php';
 $_conf['ktai']          = true;
 require_once P2_LIB_DIR . '/thread.class.php';
 require_once P2_LIB_DIR . '/threadread.class.php';
-require_once P2_LIB_DIR . '/filectl.class.php';
-require_once P2_LIB_DIR . '/ngabornctl.class.php';
-require_once P2_LIB_DIR . '/showthread.class.php';
-
+require_once P2_LIB_DIR . '/NgAbornCtl.php';
+require_once P2_LIB_DIR . '/ShowThread.php';
+require_once P2_LIB_DIR . '/P2Validate.php';
 $_login->authorize(); // ユーザ認証
 
 //================================================================
@@ -56,10 +55,8 @@ if ($_conf['ktai'] && isset($_GET['ktool_name']) && isset($_GET['ktool_value']))
 list($host, $bbs, $key, $ls) = detectThread();
 
 // {{{ レスフィルタ
-
-$res_filter = array();
-if (isset($_POST['word']))   { $GLOBALS['word'] = $_POST['word']; }
-if (isset($_GET['word']))    { $GLOBALS['word'] = $_GET['word']; }
+$res_filter = array(); // global
+$GLOBALS['word'] = geti($_POST['word'], geti($_GET['word']));
 if (isset($_POST['field']))  { $res_filter['field'] = $_POST['field']; }
 if (isset($_GET['field']))   { $res_filter['field'] = $_GET['field']; }
 if (isset($_POST['match']))  { $res_filter['match'] = $_POST['match']; }
@@ -125,7 +122,7 @@ if (!isset($GLOBALS['word'])) {
             $res_filter_cont = serialize($res_filter);
         }
         if ($res_filter_cont && empty($GLOBALS['popup_filter'])) {
-            if (FileCtl::file_write_contents($cachefile, $res_filter_cont) === false) {
+            if (false === file_put_contents($cachefile, $res_filter_cont, LOCK_EX)) {
                 die("Error: cannot write file.");
             }
         }
@@ -174,33 +171,10 @@ $aThread->getThreadInfoFromIdx();
 // }}}
 // {{{ preview >>1
 
+// preview >>1
 if (!empty($_GET['onlyone'])) {
-    
-    $aThread->ls = '1';
-    
-    // 必ずしも正確ではないが便宜的に
-    if (!isset($aThread->rescount) and !empty($_GET['rc'])) {
-        $aThread->rescount = $_GET['rc'];
-    }
-    
-    $body = $aThread->previewOne();
-    $ptitle_ht = htmlspecialchars($aThread->itaj, ENT_QUOTES) . " / " . $aThread->ttitle_hd;
-
-    // PC
-    if (empty($GLOBALS['_conf']['ktai'])) {
-        $read_header_inc_php = P2_LIB_DIR . '/read_header.inc.php';
-        $read_footer_inc_php = P2_LIB_DIR . '/read_footer.inc.php';
-    // 携帯
-    } else {
-        $read_header_inc_php = P2_IPHONE_LIB_DIR . '/read_header_k.inc.php';
-        $read_footer_inc_php = P2_IPHONE_LIB_DIR . '/read_footer_k.inc.php';
-    }
-    require_once $read_header_inc_php;
-
-    echo $body;
-    
-    require_once $read_footer_inc_php;
-    
+    $params = array('res_filter' => $res_filter);
+    _printPreview1Html($aThread, $params);
     return;
 }
 
@@ -275,13 +249,13 @@ $aThread->lsToPoint();
 //===============================================================
 // HTMLプリント
 //===============================================================
-$ptitle_ht = htmlspecialchars($aThread->itaj, ENT_QUOTES) . " / " . $aThread->ttitle_hd;
+$ptitle_ht = hs($aThread->itaj) . ' / ' . $aThread->ttitle_hs;
+
 if ($_conf['ktai']) {
 
-    if (isset($GLOBALS['word']) && strlen($GLOBALS['word']) > 0) {
-        $GLOBALS['filter_hits'] = 0;
-    } else {
-        $GLOBALS['filter_hits'] = NULL;
+    $GLOBALS['_filter_hits'] = NULL;
+    if (isset($GLOBALS['word']) && strlen($GLOBALS['word'])) {
+        $GLOBALS['_filter_hits'] = 0;
     }
     
     // ヘッダプリント
@@ -294,8 +268,16 @@ if ($_conf['ktai']) {
     }
     
     // フッタプリント
-    if ($filter_hits !== NULL) {
-        resetReadNaviFooterK();
+    if ($GLOBALS['_filter_hits'] !== NULL) {
+        $params = array(
+            'prev_st'      => $prev_st,
+            'next_st'      => $next_st,
+            'filter_range' => $filter_range,
+            'filter_page'  => $filter_page,
+            'res_filter'   => $res_filter
+        );
+        $ar = getResetReadNaviFooterK($aThread, $params);
+        extract($ar); // $read_navi_previous_btm, $read_navi_next_btm, $read_footer_navi_new_btm
     }
     require_once P2_IPHONE_LIB_DIR . '/read_footer_k.inc.php';
     
@@ -303,7 +285,7 @@ if ($_conf['ktai']) {
 
     // ヘッダ 表示
     require_once P2_IPHONE_LIB_DIR . '/read_header.inc.php';
-    flush();
+    ob_flush(); flush();
     
     //===========================================================
     // ローカルDatを変換してHTML表示
@@ -313,7 +295,7 @@ if ($_conf['ktai']) {
     
         $all = $aThread->rescount;
         
-        $GLOBALS['filter_hits'] = 0;
+        $GLOBALS['_filter_hits'] = 0;
         
         $hits_line = "<p><b id=\"filerstart\">{$all}レス中 <span id=\"searching\">{$GLOBALS['filter_hits']}</span>レスがヒット</b></p>";
         echo <<<EOP
@@ -373,7 +355,6 @@ EOP;
 }
 
 // {{{ idxの値を設定、記録
-
 if ($aThread->rescount) {
     // 検索の時は、既読数を更新しない
     if (isset($GLOBALS['word']) and strlen($GLOBALS['word']) > 0) {
@@ -381,20 +362,24 @@ if ($aThread->rescount) {
     } else {
         $aThread->readnum = min($aThread->rescount, max(0, $idx_data[5], $aThread->resrange_readnum)); 
     }
-    $newline = $aThread->readnum + 1; // $newlineは廃止予定だが、旧互換用に念のため
+    $newline = $aThread->readnum + 1; // $newlineは廃止予定だが、後方互換用に念のため
 
-    $sar = array($aThread->ttitle, $aThread->key, $idx_data[2], $aThread->rescount, '',
-                $aThread->readnum, $idx_data[6], $idx_data[7], $idx_data[8], $newline,
-                $idx_data[10], $idx_data[11], $aThread->datochiok);
-    P2Util::recKeyIdx($aThread->keyidx, $sar); // key.idxに記録
+    // key.idxに記録
+    P2Util::recKeyIdx($aThread->keyidx, array(
+        $aThread->ttitle, $aThread->key, $idx_data[2], $aThread->rescount, '',
+        $aThread->readnum, $idx_data[6], $idx_data[7], $idx_data[8], $newline,
+        $idx_data[10], $idx_data[11], $aThread->datochiok
+    ));
 }
 
 // }}}
 
 // 履歴を記録
 if ($aThread->rescount) {
-    $newdata = "{$aThread->ttitle}<>{$aThread->key}<>$idx_data[2]<><><>{$aThread->readnum}<>$idx_data[6]<>$idx_data[7]<>$idx_data[8]<>{$newline}<>{$aThread->host}<>{$aThread->bbs}";
-    recRecent($newdata);
+    _recRecent(array(
+        $aThread->ttitle, $aThread->key, $idx_data[2], '', '', $aThread->readnum, $idx_data[6],
+        $idx_data[7], $idx_data[8], $newline, $aThread->host, $aThread->bbs
+    ));
 }
 
 // NGあぼーんを記録
@@ -479,58 +464,74 @@ function detectThread()
         !empty($_GET['ls'])     and $ls   = $_GET['ls'];    // "all"
         !empty($_POST['ls'])    and $ls   = $_POST['ls'];
     }
-    
     if (empty($host) || !isset($bbs) || !isset($key)) {
-        $htm['url'] = htmlspecialchars($url, ENT_QUOTES);
-        $msg = "p2 - {$_conf['read_php']}: スレッドの指定が変です。<br>"
-            . "<a href=\"{$htm['url']}\">" . $htm['url'] . "</a>";
-        P2Util::printSimpleHtml($msg);
-        die;
-        return false;
+        $err = $_conf['read_php'] . ' スレッドの指定が変です。';
+        $msg = null;
+        if ($url) {
+            if (preg_match('/^http/', $url)) {
+                $msg = sprintf('<a href="%1$s">%1$s</a>', hs($url));
+            } else {
+                $msg = hs($url);
+            }
+        }
+        p2die($err, $msg);
     }
     
+    if (P2Validate::host($host) || P2Validate::bbs($bbs) || P2Validate::key($key)) {
+        p2die('不正な引数です');
+    }
+
     return array($host, $bbs, $key, $ls);
 }
 
 /**
- * 履歴を記録する
+ * 最近読んだスレに記録する
  *
+ * @param   array  $data_ar
  * @return  boolean
  */
-function recRecent($data)
+function _recRecent($data_ar)
 {
     global $_conf;
+    
+    $data_line = implode('<>', $data_ar);
+    $host = $data_ar[10];
+    $key  = $data_ar[1];
+    
+    // 速報headlineは最近読んだスレに記録しないようにしてみる
+    if ($host == 'headline.2ch.net') {
+        return true;
+    }
     
     if (false === FileCtl::make_datafile($_conf['rct_file'], $_conf['rct_perm'])) {
         return false;
     }
     
     $lines = file($_conf['rct_file']);
-    $neolines = array();
+    $newlines = array();
 
     // 最初に重複要素を削除しておく
     if (is_array($lines)) {
         foreach ($lines as $line) {
             $line = rtrim($line);
             $lar = explode('<>', $line);
-            $data_ar = explode('<>', $data);
-            if ($lar[1] == $data_ar[1]) { continue; } // keyで重複回避
+            if ($lar[1] == $key) { continue; } // keyで重複回避
             if (!$lar[1]) { continue; } // keyのないものは不正データ
-            $neolines[] = $line;
+            $newlines[] = $line;
         }
     }
     
     // 新規データ追加
-    array_unshift($neolines, $data);
+    array_unshift($newlines, $data_line);
 
-    while (sizeof($neolines) > $_conf['rct_rec_num']) {
-        array_pop($neolines);
+    while (sizeof($newlines) > $_conf['rct_rec_num']) {
+        array_pop($newlines);
     }
     
     // 書き込む
-    if ($neolines) {
+    if ($newlines) {
         $cont = '';
-        foreach ($neolines as $l) {
+        foreach ($newlines as $l) {
             $cont .= $l . "\n";
         }
 
@@ -542,4 +543,44 @@ function recRecent($data)
     }
     
     return true;
+}
+
+/**
+ * preview >>1
+ *
+ * @return  void  HTML出力
+ */
+function _printPreview1Html(&$aThread, $params)
+{
+    global $_conf, $STYLE, $_login;
+    global $_filter_hits;
+    
+    // $res_filter
+    extract($params);
+    
+    $aThread->ls = '1';
+    
+    // 必ずしも正確ではないが便宜的に
+    if (!isset($aThread->rescount) and !empty($_GET['rc'])) {
+        $aThread->rescount = intval($_GET['rc']);
+        $aThread->lsToPoint();
+    }
+    
+    $body = $aThread->previewOne();
+    $ptitle_ht = hs($aThread->itaj) . ' / ' . $aThread->ttitle_hs;
+
+    // PC
+    if (empty($GLOBALS['_conf']['ktai'])) {
+        $read_header_inc_php = P2_LIB_DIR . '/read_header.inc.php';
+        $read_footer_inc_php = P2_LIB_DIR . '/read_footer.inc.php';
+    // 携帯
+    } else {
+        $read_header_inc_php = P2_LIB_DIR . '/read_header_k.inc.php';
+        $read_footer_inc_php = P2_LIB_DIR . '/read_footer_k.inc.php';
+    }
+    require_once $read_header_inc_php;
+
+    echo $body;
+    
+    require_once $read_footer_inc_php;
 }

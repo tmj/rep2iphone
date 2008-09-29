@@ -49,8 +49,10 @@ EOP;
     //=========================================================
     // Œg‘Ñ—p HTML ƒvƒŠƒ“ƒg
     //=========================================================
-    P2Util::header_nocache();
-    echo $_conf['doctype'];
+  //  P2Util::header_nocache();
+// echo $_conf['doctype'];
+    P2Util::headerNoCache();
+    P2View::printDoctypeTag();
     echo <<<EOP
 <html>
 <head>

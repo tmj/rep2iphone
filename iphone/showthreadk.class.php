@@ -1,5 +1,5 @@
 <?php
-require_once P2_LIB_DIR . '/showthread.class.php';
+require_once P2_LIB_DIR . '/showthread.php';
 require_once P2_LIB_DIR . '/StrSjis.php';
 
 /**

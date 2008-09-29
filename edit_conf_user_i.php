@@ -93,8 +93,8 @@ $me = P2Util::getMyUrl();
 // プリント
 //=====================================================================
 // ヘッダHTMLをプリント
-P2Util::header_nocache();
-echo $_conf['doctype'];
+P2Util::headerNoCache();
+P2View::printDoctypeTag();
 echo <<<EOP
 <html lang="ja">
 <head>

@@ -8,7 +8,7 @@ require_once './conf/conf.inc.php';
 require_once './iphone/conf.inc.php';
 
 require_once P2_LIB_DIR . '/filectl.class.php';
-
+require_once P2_LIB_DIR . '/P2View.php';
 $_login->authorize(); // ユーザ認証
 
 // {{{ ホストの同期用設定
@@ -60,8 +60,8 @@ $autho_user_ht = '';
 //=========================================================
 // HTMLを表示する
 //=========================================================
-P2Util::header_nocache();
-echo $_conf['doctype'];
+P2Util::headerNoCache();
+P2View::printDoctypeTag();
 echo <<<EOP
 <html lang="ja">
 <head>
