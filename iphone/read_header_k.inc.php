@@ -18,13 +18,22 @@ $dores_st       = "レス";
 $find_st        = '検索';
 
 $motothre_url   = $aThread->getMotoThread();
-$ttitle_en      = rawurlencode(base64_encode($aThread->ttitle));
+$ttitle_en      = base64_encode($aThread->ttitle);
+$ttitle_urlen   = rawurlencode($ttitle_en);
 $ttitle_en_q    = "&amp;ttitle_en=" . $ttitle_en;
 $bbs_q          = "&amp;bbs=" . $aThread->bbs;
 $key_q          = "&amp;key=" . $aThread->key;
 $offline_q      = "&amp;offline=1";
 
 $word_hs        = htmlspecialchars($GLOBALS['word'], ENT_QUOTES);
+
+$thread_qs = array(
+    'host' => $aThread->host,
+    'bbs'  => $aThread->bbs,
+    'key'  => $aThread->key
+);
+
+$newtime = date('gis');  // 同じリンクをクリックしても再読込しない仕様に対抗するダミークエリー
 
 //=================================================================
 // ヘッダHTML
@@ -96,14 +105,14 @@ $read_navi_prev_anchor = '';
 //}
 
 if (!$read_navi_prev_isInvisible) {
-    $q = http_build_query(array(
-            'host'      => $aThread->host,
-            'bbs'       => $aThread->bbs,
-            'key'       => $aThread->key,
+    $q = P2Util::buildQuery(array_merge(
+        $thread_qs,
+        array(
             //'ls'        => "{$before_rnum}-{$aThread->resrange['start']}n",
             'offline'   => '1',
-            'b'         => $_conf['b']
-            ));
+            UA::getQueryKey() => UA::getQueryValue()
+        )
+    ));
     
 //$html = "{$_conf['k_accesskey']['prev']}.{$prev_st}";
     $html = "{$prev_st}";
@@ -111,15 +120,15 @@ if (!$read_navi_prev_isInvisible) {
     
     if ($aThread->resrange_multi and !empty($_REQUEST['page']) and $_REQUEST['page'] > 1) {
         $html = $html . '*';
-        $url .= '&amp;ls=' . $aThread->ls; // http_build_query() を通して urlencode を掛けたくないので
-        $page = $_REQUEST['page'] - 1;
-        $url .= '&amp;page=' . $page;
+       $url .= '&ls=' . $aThread->ls;
+        $prev_page = intval($_REQUEST['page']) - 1;
+        $url .= '&page=' . $prev_page;
     } else {
-        $url .= '&amp;ls=' . "{$before_rnum}-{$aThread->resrange['start']}n";
+        $url .= '&ls=' . "{$before_rnum}-{$aThread->resrange['start']}n";
     }
     
-    $read_navi_previous = P2Util::tagA($url, $html);
-    $read_navi_previous_btm = P2Util::tagA($url, $html, array($_conf['accesskey'] => $_conf['k_accesskey']['prev']));
+    $read_navi_previous = P2View::tagA($url, $html);
+    $read_navi_previous_btm = P2View::tagA($url, $html, array($_conf['accesskey'] => $_conf['k_accesskey']['prev']));
 }
 
 //----------------------------------------------
@@ -143,47 +152,72 @@ if ($aThread->resrange['to'] == $aThread->rescount) {
 $after_rnum = $aThread->resrange['to'] + $rnum_range;
 
 if (!$read_navi_next_isInvisible) {
-    $q = http_build_query(array(
-            'host'      => $aThread->host,
-            'bbs'       => $aThread->bbs,
-            'key'       => $aThread->key,
-            //'ls'        => "{$aThread->resrange['to']}-{$after_rnum}n",
-            'offline'   => '1',
-            'nt'        => $newtime,
-            'b'         => $_conf['b']
-            ));
+    $url = P2Util::buildQueryUri(
+        $_conf['read_php'],
+        array_merge(
+            $thread_qs,
+            array(
+                //'ls'        => "{$aThread->resrange['to']}-{$after_rnum}n",
+                'offline'   => '1',
+                'nt'        => $newtime,
+                UA::getQueryKey() => UA::getQueryValue()
+            )
+        )
+    );
     
     $html = "{$next_st}";
-    $url = $_conf['read_php'] . '?' . $q;
+    //$url = $_conf['read_php'] . '?' . $q;
 
     // $aThread->resrange['to'] > $aThread->resrange_readnum
     if ($aThread->resrange_multi and !empty($aThread->resrange_multi_exists_next)) {
         $html = $html . '*';
-        $url .= '&amp;ls=' . $aThread->ls; // http_build_query() を通して urlencode を掛けたくないので
+       $url .= '&ls=' . $aThread->ls; // http_build_query() を通して urlencode を掛けたくない？
         $page = isset($_REQUEST['page']) ? max(1, intval($_REQUEST['page'])) : 1;
         $next_page = $page + 1;
-        $url .= '&amp;page=' . $next_page;
+        $url .= '&page=' . $next_page;
     } else {
-        $url .= '&amp;ls=' . "{$aThread->resrange['to']}-{$after_rnum}n" . $read_navi_next_anchor;
+        $url .= '&ls=' . "{$aThread->resrange['to']}-{$after_rnum}n" . $read_navi_next_anchor;
     }
     
-    $read_navi_next = P2Util::tagA($url, $html);
-    $read_navi_next_btm = P2Util::tagA($url, $html, array($_conf['accesskey'] => $_conf['k_accesskey']['next']));
+    $read_navi_next = P2View::tagA($url, $html);
+    $read_navi_next_btm = P2View::tagA($url, $html, array($_conf['accesskey'] => $_conf['k_accesskey']['next']));
 }
 
 //----------------------------------------------
 // $read_footer_navi_new  続きを読む 新着レスの表示
 
 if ($aThread->resrange['to'] == $aThread->rescount) {
-
+  
+    // 新着レスの表示 <a>
+    $read_footer_navi_new_uri = P2Util::buildQueryUri(
+        $_conf['read_php'],
+        array(
+            'host' => $aThread->host,
+            'bbs'  => $aThread->bbs,
+            'key'  => $aThread->key,
+            'ls'   => "{$aThread->rescount}-n",
+            'nt'   => $newtime,
+            UA::getQueryKey() => UA::getQueryValue()
+        )
+    ) . '#r' . rawurlencode($aThread->rescount);
+    
+    $read_footer_navi_new = P2View::tagA(
+        $read_footer_navi_new_uri,
+        "{$shinchaku_st}"
+    );
+    $read_footer_navi_new_btm = P2View::tagA(
+        $read_footer_navi_new_uri,
+        "{$shinchaku_st}"
+    );
+}
     // 新着
-    $read_footer_navi_new = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}\">{$shinchaku_st}</a>";
+    //$read_footer_navi_new = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}\">{$shinchaku_st}</a>";
     
     //$read_footer_navi_new_btm = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}#r{$aThread->rescount}\">{$shinchaku_st}</a>";
-    $read_footer_navi_new_btm = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}\">{$shinchaku_st}</a>";
-}
+    //$read_footer_navi_new_btm = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}\">{$shinchaku_st}</a>";
 
-if (!$read_navi_next_isInvisible) {
+
+if (!$read_navi_next_isInvisible || $GLOBALS['_filter_hits'] !== null) {
 
     // 最新
     $read_navi_latest = <<<EOP
@@ -204,9 +238,8 @@ $read_navi_filter_btm = <<<EOP
 EOP;
 // }}}
 
-//====================================================================
-// 検索時の特別な処理
-//====================================================================
+// }}}
+// {{{ 検索時の特別な処理
 if ($filter_hits !== NULL) {
     include P2_IPHONE_LIB_DIR . '/read_filter_k.inc.php';
     resetReadNaviHeaderK();

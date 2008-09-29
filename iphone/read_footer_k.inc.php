@@ -23,10 +23,9 @@ if (!empty($_GET['onlyone'])) {
 }
 
 // レス番指定移動 etc.
-$goto_ht = kspform(isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to'], $aThread);
+$goto_ht = _kspform($aThread, isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to']);
 
-// フィルター表示 Edit 080727 by 240
-$seafrm_ht =  CreateFilterForm(isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to'], $aThread);
+$hr = P2View::getHrHtmlK();
 
 
 //=====================================================================

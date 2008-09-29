@@ -869,26 +869,26 @@ function saveSbSetting($p2_setting_txt, $p2_setting, $pre_setting)
 {
     global $_conf;
 
-    $pre_setting_itaj = isset($pre_setting['itaj']) ? $pre_setting['itaj'] : null;
-    $p2_setting_itaj = isset($p2_setting['itaj']) ? $p2_setting['itaj'] : null;
-    
-    if ($pre_setting['viewnum'] != $p2_setting['viewnum'] or $pre_setting['sort'] != $GLOBALS['now_sort'] or $pre_setting_itaj != $p2_setting_itaj) {
+    if (
+        $pre_setting['viewnum'] != $p2_setting['viewnum']
+        or $pre_setting['sort'] != $GLOBALS['now_sort']
+        or $pre_setting_itaj != $p2_setting_itaj
+    ) {
         if (!empty($_POST['sort'])) {
             $p2_setting['sort'] = $_POST['sort'];
         } elseif (!empty($_GET['sort'])) {
             $p2_setting['sort'] = $_GET['sort'];
         }
-        if (false === FileCtl::make_datafile($p2_setting_txt, $_conf['p2_perm'])) {
-            return false;
-        }
         if ($p2_setting) {
+            if (false === FileCtl::make_datafile($p2_setting_txt, $_conf['p2_perm'])) {
+                return false;
+            }
             $p2_setting_cont = serialize($p2_setting);
-            if (FileCtl::file_write_contents($p2_setting_txt, $p2_setting_cont) === false) {
-                die("Error: cannot write file.");
+            if (false === file_put_contents($p2_setting_txt, $p2_setting_cont, LOCK_EX)) {
+                return false;
             }
         }
     }
-    
     return true;
 }
 
