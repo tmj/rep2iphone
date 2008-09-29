@@ -23,7 +23,7 @@ if (!empty($_GET['onlyone'])) {
 }
 
 // ÉåÉXî‘éwíËà⁄ìÆ etc.
-$goto_ht = _kspform($aThread, isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to']);
+//$goto_ht = _kspform($aThread, isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to']);
 
 $hr = P2View::getHrHtmlK();
 
@@ -167,7 +167,7 @@ echo '</body></html>';
  *
  * @return string
  */
-function kspform($default = '', &$aThread)
+function _kspform($default = '', &$aThread)
 {
     global $_conf;
 
@@ -211,7 +211,49 @@ function kspform($default = '', &$aThread)
 
     return $form;
 }
+/**
+ * èë <a>
+ *
+ * @return  string  HTML
+ */
+function _getDoResATag($aThread, $dores_st, $motothre_url)
+{
+    global $_conf;
+    
+    $dores_atag = null;
+    
+    if (!empty($_conf['disable_res'])) {
+        $dores_atag = P2View::tagA(
+            $motothre_url,
+            hs("{$_conf['k_accesskey']['res']}.{$dores_st}"),
+            array(
+                'target' => '_blank',
+                $_conf['accesskey'] => $_conf['k_accesskey']['res']
+            )
+        );
 
+    } else {
+        $dores_atag = P2View::tagA(
+            P2Util::buildQueryUri(
+                'post_form.php',
+                array(
+                    'host' => $aThread->host,
+                    'bbs'  => $aThread->bbs,
+                    'key'  => $aThread->key,
+                    'rescount' => $aThread->rescount,
+                    'ttitle_en' => base64_encode($aThread->ttitle),
+                    UA::getQueryKey() => UA::getQueryValue()
+                )
+            ),
+            hs("{$_conf['k_accesskey']['res']}.{$dores_st}"),
+            array(
+                $_conf['accesskey'] => $_conf['k_accesskey']['res']
+            )
+        );
+    }
+    
+    return $dores_atag;
+}
 //=====================================================================
 // ä÷êî
 //=====================================================================
