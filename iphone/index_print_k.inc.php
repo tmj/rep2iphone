@@ -1,38 +1,39 @@
 <?php
 /**
  * p2 - 携帯用インデックスをHTMLプリントする関数
+* @return  void
  */
 function index_print_k()
 {
     global $_conf, $_login;
 
-    $newtime = date('gis');
+    $menuKLinkHtmls = getMenuKLinkHtmls($_conf['menuKIni']);
     
-    $body = "";
-    $ptitle = "rep2phone";
+    $body = '';
+    $ptitle = 'ﾕﾋﾞｷﾀｽrep2';
     
     // ログインユーザ情報
-    $htm['auth_user'] = "<p>ユーザー: {$_login->user_u} - " . date("Y/m/d (D) G:i:s") . "</p>\n";
+    $htm['auth_user']   = '<p>ﾛｸﾞｲﾝﾕｰｻﾞ: ' . hs($_login->user_u) . ' - ' . date('Y/m/d (D) G:i:s') . '</p>' . "\n";
     
     // p2ログイン用URL
-    $login_url = rtrim(dirname(P2Util::getMyUrl()), '/') . '/';
-    $login_url_pc = $login_url . '?b=pc';
-    $login_url_pc_hs = hs($login_url_pc);
-    $login_url_k = $login_url . '?b=k&user=' . $_login->user_u;
-    $login_url_k_hs = hs($login_url_k);
+    $login_url          = rtrim(dirname(P2Util::getMyUrl()), '/') . '/';
+    $login_url_pc       = $login_url . '?b=pc';
+    $login_url_pc_hs    = hs($login_url_pc);
+    $login_url_k        = $login_url . '?b=k&user=' . $_login->user_u;
+    $login_url_k_hs     = hs($login_url_k);
     
     // 前回のログイン情報
     if ($_conf['login_log_rec'] && $_conf['last_login_log_show']) {
-        if (($log = P2Util::getLastAccessLog($_conf['login_log_file'])) !== false) {
-            $log_hd = array_map('htmlspecialchars', $log);
+        if (false !== $log = P2Util::getLastAccessLog($_conf['login_log_file'])) {
+            $log_hs = array_map('htmlspecialchars', $log);
             $htm['last_login'] = <<<EOP
 <font color="#888888">
-前回のﾛｸﾞｲﾝ情報 - {$log_hd['date']}<br>
-ﾕｰｻﾞ:   {$log_hd['user']}<br>
-IP:     {$log_hd['ip']}<br>
-HOST:   {$log_hd['host']}<br>
-UA:     {$log_hd['ua']}<br>
-REFERER: {$log_hd['referer']}
+前回のﾛｸﾞｲﾝ情報 - {$log_hs['date']}<br>
+ﾕｰｻﾞ:   {$log_hs['user']}<br>
+IP:     {$log_hs['ip']}<br>
+HOST:   {$log_hs['host']}<br>
+UA:     {$log_hs['ua']}<br>
+REFERER: {$log_hs['referer']}
 </font>
 EOP;
         }
@@ -46,6 +47,9 @@ EOP;
     require_once P2_LIB_DIR . '/brdctl.class.php';
     $search_form_htm = BrdCtl::getMenuKSearchFormHtml('menu_i.php');
 
+    $body_at    = P2View::getBodyAttrK();
+    $hr         = P2View::getHrHtmlK();
+
     //=========================================================
     // 携帯用 HTML プリント
     //=========================================================
@@ -53,11 +57,14 @@ EOP;
 // echo $_conf['doctype'];
     P2Util::headerNoCache();
     P2View::printDoctypeTag();
-    echo <<<EOP
+    ?>
 <html>
 <head>
-    {$_conf['meta_charset_ht']}
-<meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
+<?php
+    P2View::printHeadMetasHtml();
+
+//    {$_conf['meta_charset_ht']}
+echo <<<EOP
 <script type="text/javascript"> 
 <!-- 
 window.onload = function() { 
@@ -71,32 +78,136 @@ setTimeout(scrollTo, 100, 0, 1);
 <body>
     <div class="toolbar">
 <h1 id="pageTitle">{$ptitle}</h1>
-<a class="button" href="editpref_i.php?dummy=1{$user_at_a}{$_conf['k_at_a']}">設定管理 </a>
-</div>
+    <a class="button" href="edit_indexmenuk.php{$user_at_q}{$_conf['k_at_a']}">並替</a>
+    </div>
+    <ul id="home">
+    <li class="group">メニュー</li>
 EOP;
-    P2Util::printInfoHtml();
+P2Util::printInfoHtml();
+ foreach ($menuKLinkHtmls as $v) {
+        echo "<li>" . $v . "</li>\n";
+    }
+
 echo <<<EOP
- <ul id="home">
-<li class="group">メニュー</li>
-<li><a href="{$_conf['subject_php']}?spmode=recent&amp;sb_view=shinchaku{$_conf['k_at_a']}{$user_at_a}">最近読んだスレの新着</a></li>
-<li><a href="{$_conf['subject_php']}?spmode=recent&amp;norefresh=1{$_conf['k_at_a']}{$user_at_a}">最近読んだスレの全て</a></li>
-<li><a href="{$_conf['subject_php']}?spmode=fav&amp;sb_view=shinchaku{$_conf['k_at_a']}{$user_at_a}">お気にスレの新着</a></li>
-<li><a href="{$_conf['subject_php']}?spmode=fav&amp;norefresh=1{$_conf['k_at_a']}{$user_at_a}">お気にスレの全て</a></li>
-<li><a href="menu_i.php?view=favita{$_conf['k_at_a']}{$user_at_a}">お気に板</a></li>
-<li><a href="menu_i.php?view=cate{$_conf['k_at_a']}{$user_at_a}">板リスト</a></li>
-<li><a href="{$_conf['subject_php']}?spmode=res_hist{$_conf['k_at_a']}{$user_at_a}">書込履歴</a> </li>
-<li><a href="read_res_hist.php?nt={$newtime}{$_conf['k_at_a']}">ログ</a></li>
-<li><a href="{$_conf['subject_php']}?spmode=palace&amp;norefresh=1{$_conf['k_at_a']}{$user_at_a}">スレの殿堂</a></li>
-<li><a href="setting.php?dummy=1{$user_at_a}{$_conf['k_at_a']}">ログイン管理</a></li>
-<li class="group">板検索</li>
+<li class="group">検索</li>
 {$search_form_htm}
 </ul>
-<br><br>
+<br>
 </body>
 </html>
 EOP;
 
 }
+/*
+
+{$hr}
+{$htm['auth_user']}
+
+{$hr}
+{$htm['last_login']}
+*/
+
+function getMenuKLinkHtmls($menuKIni, $noLink = false)
+{
+    global $_conf;
+    
+    $menuLinkHtmls = array();
+    // ユーザ設定順序でメニューHTMLを取得
+    foreach ($_conf['index_menu_k'] as $code) {
+        if (isset($menuKIni[$code])) {
+            if ($html = _getMenuKLinkHtml($code, $menuKIni, $noLink)) {
+                $menuLinkHtmls[$code] = $html;
+                unset($menuKIni[$code]);
+            }
+        }
+    }
+    if ($menuKIni) {
+        foreach ($menuKIni as $code => $menu) {
+            if ($html = _getMenuKLinkHtml($code, $menuKIni, $noLink)) {
+                $menuLinkHtmls[$code] = $html;
+                unset($menuKIni[$code]);
+            }
+        }
+    }
+    return $menuLinkHtmls;
+}
+
+//============================================================================
+// 関数（このファイル内でのみ利用）
+//============================================================================
+/**
+ * メニュー項目のリンクHTMLを取得する
+ *
+ * @param   array   $menuKIni  メニュー項目 標準設定
+ * @param   boolean $noLink    リンクをつけないのならtrue
+ * @return  string  HTML
+ */
+function _getMenuKLinkHtml($code, $menuKIni, $noLink = false)
+{
+    global $_conf, $_login;
+    
+    static $accesskey_;
+    
+    // 無効なコード指定なら
+    if (!isset($menuKIni[$code][0]) || !isset($menuKIni[$code][1])) {
+        return false;
+    }
+    
+    if (!isset($accesskey_)) {
+        $accesskey_ = 0;
+    } else {
+        $accesskey_++;
+    }
+    $accesskey = $accesskey_;
+    
+    if ($_conf['index_menu_k_from1']) {
+        $accesskey = $accesskey + 1;
+        if ($accesskey == 10) {
+            $accesskey = 0;
+        }
+    }
+    if ($accesskey > 9) {
+        $accesskey = null;
+    }
+    
+    $href = $menuKIni[$code][0] . '&user=' . $_login->user_u . '&' . UA::getQueryKey() . '=' . UA::getQueryValue();
+    $name = $menuKIni[$code][1];
+    /*if (!is_null($accesskey)) {
+        $name = $accesskey . '.' . $name;
+    }*/
+
+    if ($noLink) {
+        $linkHtml = hs($name);
+    } else {
+        $accesskeyAt = is_null($accesskey) ? '' : " {$_conf['accesskey']}=\"{$accesskey}\"";
+        $linkHtml = "<a href=\"" . hs($href) . '">' . hs($name) . "</a>";
+    }
+    
+    // 特別 - #.ログ
+    if ($code == 'res_hist') {
+        $name = 'ログ';
+        if ($noLink) {
+            $logHt = hs($name);
+        } else {
+            $newtime = date('gis');
+            $logHt = P2View::tagA(
+                P2Util::buildQueryUri(
+                    'read_res_hist.php',
+                    array(
+                        'nt' => $newtime,
+                        UA::getQueryKey() => UA::getQueryValue()
+                    )
+                ),
+                hs($name),
+                array($_conf['accesskey'] => '#')
+            );
+        }
+        $linkHtml .= ' </li><li>' . $logHt ;
+    }
+    
+    return $linkHtml;
+}
+
 
 /*
  * Local Variables:
@@ -108,3 +219,10 @@ EOP;
  * End:
  */
 // vim: set syn=php fenc=cp932 ai et ts=4 sw=4 sts=4 fdm=marker:
+/**
+ * メニュー項目のリンクHTML配列を取得する
+ *
+ * @access  public
+ * @param   array   $menuKIni  メニュー項目 標準設定
+ * @return  array
+ */

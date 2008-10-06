@@ -13,4 +13,49 @@ $_conf['post_php']      = 'post_i.php';
 $_conf['read_new_k_php']        = 'read_new_i.php';
 $_conf['post_php']              = 'post_i.php';
 $_conf['meta_charset_ht'] .= '<link rel="apple-touch-icon" href="p2iphone.png" /><meta name="viewport" content="width=320; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;"/>';
+
+
+$_conf['menuKIni'] = array(
+    'recent_shinchaku'  => array(
+        'subject_i.php?spmode=recent&sb_view=shinchaku',
+        '最近読んだスレの新着'
+    ),
+    'recent'            => array(
+        'subject_i.php?spmode=recent&norefresh=1',
+        '最近読んだスレの全て'
+    ),
+    'fav_shinchaku'     => array(
+        'subject_i.php?spmode=fav&sb_view=shinchaku',
+        'お気にスレの新着'
+    ),
+    'fav'               => array(
+        'subject_i.php?spmode=fav&norefresh=1',
+        'お気にスレの全て'
+    ),
+    'favita'            => array(
+        'menu_i.php?view=favita',
+        'お気に板'
+    ),
+    'cate'              => array(
+        'menu_i.php?view=cate',
+        '板リスト'
+    ),
+    'res_hist'          => array(
+        'subject_i.php?spmode=res_hist',
+        '書込履歴'
+    ),
+    'palace'            => array(
+        'subject_i.php?spmode=palace&norefresh=1',
+        'スレの殿堂'
+    ),
+    'setting'           => array(
+        'setting_i.php?dummy=1',
+        'ログイン管理'
+    ),
+    'editpref'          => array(
+        'editpref_i.php?dummy=1',
+        '設定管理'
+    )
+);
+
 ?>
