@@ -50,41 +50,31 @@ if ($get['view'] == "favita") {
     $ptitle = "ﾕﾋﾞｷﾀｽp2";
 }
 
-echo $_conf['doctype'];
-/*
-echo <<<EOP
-<html>
+P2View::printDoctypeTag();
+?>
+<html lang="ja">
 <head>
-    {$_conf['meta_charset_ht']}
-    <meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
-
-    <title>{$ptitle}</title>\n
-EOP;
-*/
-
-echo <<<EEE
-<html>
-<head>
-{$_conf['meta_charset_ht']}
-<meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
 <style type="text/css" media="screen">@import "./iui/iui.css";</style>
 <script type="text/javascript"> 
 <!-- 
 window.onload = function() { 
 setTimeout(scrollTo, 100, 0, 1); 
 } 
-// --> 
 </script> 
-<title>{$ptitle}</title>
-</head><body>\n
-<div class="toolbar"><h1 id="pageTitle">{$ptitle}</h1></div>
-EEE;
+<?php
+P2View::printHeadMetasHtml();
+?>
+
+<title><?php eh($ptitle); ?></title>
+</head><body>
+<div class="toolbar"><h1 id="pageTitle"><?php eh($ptitle); ?></h1></div>
+<?php
 P2Util::printInfoHtml();
+
 
 // お気に板をHTML表示する
 if ($get['view'] == 'favita') {
     $aShowBrdMenuK->printFavItaHtml();
-    echo '<p><a id="backButton"class="button" href="iphone.php">TOP</a></p>';
 
 // それ以外ならbrd読み込み
 } else {
@@ -93,7 +83,6 @@ if ($get['view'] == 'favita') {
 
 // 板検索フォームをHTML表示
 if ($get['view'] != 'favita' && $get['view'] != 'rss' && empty($_GET['cateid'])) {
-    echo  '<ul><li class="group">検索</li></ul>';
     echo '<div id="usage" class="panel"><filedset>';
     echo BrdCtl::getMenuKSearchFormHtml();
     echo '</filedset></div>';
@@ -104,17 +93,19 @@ if ($get['view'] != 'favita' && $get['view'] != 'rss' && empty($_GET['cateid']))
 //===========================================================
 // {{{ 検索ワードがあれば
 
+$modori_url_ht = '';
+
+// {{{ 検索ワードがあれば
+
 if (strlen($GLOBALS['word']) > 0) {
 
-    $word_hs = htmlspecialchars($word, ENT_QUOTES);
-
+    ?>板ﾘｽﾄ検索結果
+    <?php
     if ($GLOBALS['ita_mikke']['num']) {
-$hit_ht = "\"{$word_hs}\" {$GLOBALS['ita_mikke']['num']}hit!";
+        printf('<br>"%s" %dhit!', hs($GLOBALS['word']), $GLOBALS['ita_mikke']['num']);
+        echo $hr;
     }
-    echo '<div id="usage" class="panel">';
-    echo "<h2>板リスト検索結果{$hit_ht}</h2>";
-    echo '</div>';
-
+    
     // 板名を検索して表示する
     if ($brd_menus) {
         foreach ($brd_menus as $a_brd_menu) {
@@ -123,25 +114,31 @@ $hit_ht = "\"{$word_hs}\" {$GLOBALS['ita_mikke']['num']}hit!";
     }
 
     if (!$GLOBALS['ita_mikke']['num']) {
-        P2Util::pushInfoHtml("<p>\"{$word_hs}\"を含む板は見つかりませんでした。</p>");
+        P2Util::pushInfoHtml(sprintf('<p>"%s"を含む板は見つかりませんでした。</p>', hs($GLOBALS['word'])));
     }
-    $modori_url_ht = <<<EOP
-
-EOP;
+    $atag = P2View::tagA(
+        P2Util::buildQueryUri('menu_k.php',
+            array(
+                'view' => 'cate',
+                'nr'   => '1',
+                UA::getQueryKey() => UA::getQueryValue()
+            )
+        ),
+        hs('板ﾘｽﾄ')
+    );
+    $modori_url_ht = '<div>' . $atag . '</div>';
 }
 
 // }}}
-
 // カテゴリをHTML表示
 if ($get['view'] == 'cate' or isset($_REQUEST['word']) && strlen($GLOBALS['word']) == 0) {
+    //echo "板ﾘｽﾄ{$hr}";
     if ($brd_menus) {
         foreach ($brd_menus as $a_brd_menu) {
             $aShowBrdMenuK->printCate($a_brd_menu->categories);
         }
     }
-    echo '<p><a id="backButton"class="button" href="iphone.php">TOP</a></p>';
 }
-
 
 // カテゴリの板をHTML表示
 if (isset($_GET['cateid'])) {
@@ -150,20 +147,23 @@ if (isset($_GET['cateid'])) {
             $aShowBrdMenuK->printIta($a_brd_menu->categories);
         }
     }
-    $modori_url_ht = <<<EOP
-<div><a id="backButton"class="button" href="menu_i.php?view=cate&amp;nr=1{$_conf['k_at_a']}">板リスト </a></div>
-EOP;
+    $modori_url_ht = P2View::tagA(
+        P2Util::buildQueryUri('menu_k.php',
+            array('view' => 'cate', 'nr' => '1', UA::getQueryKey() => UA::getQueryValue())
+        ),
+        '板ﾘｽﾄ'
+    ) . '<br>';
 }
+
 
 P2Util::printInfoHtml();
 
-!isset($GLOBALS['list_navi_ht']) and $GLOBALS['list_navi_ht'] = null;
-!isset($modori_url_ht) and $modori_url_ht = null;
 
 // フッタをHTML表示
-echo $list_navi_ht;
-echo $modori_url_ht;
-//echo $_conf['k_to_index_ht'];
-//echo '<p><a id="backButton"class="button" href="index.php?b=k">TOP</a></p>';
-echo '</body></html>';
+echo geti($GLOBALS['list_navi_ht']);
+echo '<p><a id="backButton"class="button" href="iphone.php">TOP</a></p>';
+?>
+</body></html>
+<?php
 
+exit;
