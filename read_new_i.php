@@ -52,7 +52,7 @@ if ((empty($host) || !isset($bbs)) && !isset($spmode)) {
 
 register_shutdown_function('saveMatomeCache');
 
-$GLOBALS['read_new_html'] = '';
+$GLOBALS['_read_new_html'] = '';
 ob_start();
 
 $aThreadList =& new ThreadList();
@@ -314,7 +314,7 @@ for ($x = 0; $x < $linesize; $x++) {
     
     P2Util::printInfoHtml();
     
-    $GLOBALS['read_new_html'] .= ob_get_flush();
+    $GLOBALS['_read_new_html'] .= ob_get_flush();
     ob_start();
         
     if (($aThread->readnum < 1) || $aThread->unum) {
@@ -324,7 +324,7 @@ for ($x = 0; $x < $linesize; $x++) {
         //echo "<hr>\n";
     }
     
-    $GLOBALS['read_new_html'] .= ob_get_flush();
+    $GLOBALS['_read_new_html'] .= ob_get_flush();
     ob_start();
     
     // ÉäÉXÉgÇ…í«â¡
@@ -570,7 +570,7 @@ echo <<<EOP
 </div>
 </body></html>
 EOP;
-$GLOBALS['read_new_html'] .= ob_get_flush();
+$GLOBALS['_read_new_html'] .= ob_get_flush();
 
 // å„èàóù
 
