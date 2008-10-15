@@ -9,6 +9,7 @@ require_once './iphone/conf.inc.php';
 $_conf['ktai']          = true;
 require_once P2_LIB_DIR . '/thread.class.php';
 require_once P2_LIB_DIR . '/threadread.class.php';
+require_once P2_LIB_DIR . '/filectl.class.php';
 require_once P2_LIB_DIR . '/NgAbornCtl.php';
 require_once P2_LIB_DIR . '/ShowThread.php';
 require_once P2_LIB_DIR . '/P2Validate.php';
@@ -17,32 +18,41 @@ $_login->authorize(); // ユーザ認証
 //================================================================
 // 変数
 //================================================================
-$newtime = date('gis');  // 同じリンクをクリックしても再読込しない仕様に対抗するダミークエリー
 
-// {{{ 特殊リクエスト
+// {{{ 携帯用 特殊リクエスト
 
 if ($_conf['ktai'] && isset($_GET['ktool_name']) && isset($_GET['ktool_value'])) {
-    $ktv = (int) $_GET['ktool_value'];
+
     switch ($_GET['ktool_name']) {
         case 'goto':
-            $_REQUEST['ls'] = $_GET['ls'] = $ktv . '-' . ($ktv + $_conf['k_rnum_range']);
+            if (strpos($_GET['ktool_value'], '-') !== false) {
+                $_REQUEST['ls'] = $_GET['ls'] = $_GET['ktool_value'];
+            } else {
+                $ktv = intval($_GET['ktool_value']);
+                $_REQUEST['ls'] = $_GET['ls'] = $ktv . '-' . ($ktv + $_conf['k_rnum_range']);
+            }
             break;
+            
         case 'res_quote':
-            $_GET['resnum'] = $ktv;
+            $_GET['resnum'] = (int)$_GET['ktool_value'];
             $_GET['inyou'] = 1;
-            require './post_form_i.php';
+            require './post_form.php';
             exit;
+            
         case 'copy_quote':
             $_GET['inyou'] = 1;
+            
         case 'copy':
-            $GLOBALS['_read_copy_resnum'] = $ktv;
+            $GLOBALS['_read_copy_resnum'] = (int)$_GET['ktool_value'];
             require './read_copy_k.php';
             exit;
+            
         /* 2006/03/06 aki ノーマルp2では未対応
         case 'aas_rotate':
             $_GET['rotate'] = 1;
+            
         case 'aas':
-            $_GET['resnum'] = $ktv;
+            $_GET['resnum'] = (int)$_GET['ktool_value'];
             require './aas.php';
             exit;
         */
@@ -52,33 +62,37 @@ if ($_conf['ktai'] && isset($_GET['ktool_name']) && isset($_GET['ktool_value']))
 // }}}
 
 // スレの指定
-list($host, $bbs, $key, $ls) = detectThread();
+list($host, $bbs, $key, $ls) = _detectThread();
 
 // {{{ レスフィルタ
-$res_filter = array(); // global
-$GLOBALS['word'] = geti($_POST['word'], geti($_GET['word']));
-if (isset($_POST['field']))  { $res_filter['field'] = $_POST['field']; }
-if (isset($_GET['field']))   { $res_filter['field'] = $_GET['field']; }
-if (isset($_POST['match']))  { $res_filter['match'] = $_POST['match']; }
-if (isset($_GET['match']))   { $res_filter['match'] = $_GET['match']; }
-if (isset($_POST['method'])) { $res_filter['method'] = $_POST['method']; }
-if (isset($_GET['method']))  { $res_filter['method'] = $_GET['method']; }
+
+$GLOBALS['res_filter'] = array(
+    'field'  => null,
+    'match'  => null,
+    'method' => null
+);
+
+if (isset($_POST['field']))  { $GLOBALS['res_filter']['field']  = $_POST['field']; }
+if (isset($_GET['field']))   { $GLOBALS['res_filter']['field']  = $_GET['field']; }
+if (isset($_POST['match']))  { $GLOBALS['res_filter']['match']  = $_POST['match']; }
+if (isset($_GET['match']))   { $GLOBALS['res_filter']['match']  = $_GET['match']; }
+if (isset($_POST['method'])) { $GLOBALS['res_filter']['method'] = $_POST['method']; }
+if (isset($_GET['method']))  { $GLOBALS['res_filter']['method'] = $_GET['method']; }
 
 // $GLOBALS['word'] などの検索語の取り扱いがどさくさなのは、できれば整理したいところ...
-
+$GLOBALS['word'] = geti($_POST['word'], geti($_GET['word']));
 $GLOBALS['word_fm'] = null;
 
-if (isset($GLOBALS['word']) && strlen($GLOBALS['word']) > 0) {
-
+if (strlen($GLOBALS['word'])) {
     // デフォルトオプション
-    if (empty($res_filter['field']))  { $res_filter['field']  = "hole"; }
-    if (empty($res_filter['match']))  { $res_filter['match']  = "on"; }
-    if (empty($res_filter['method'])) { $res_filter['method'] = "or"; }
+    if (empty($GLOBALS['res_filter']['field']))  { $GLOBALS['res_filter']['field']  = "hole"; }
+    if (empty($GLOBALS['res_filter']['match']))  { $GLOBALS['res_filter']['match']  = "on"; }
+    if (empty($GLOBALS['res_filter']['method'])) { $GLOBALS['res_filter']['method'] = "or"; }
 
-    if (!($res_filter['method'] == 'regex' && preg_match('/^\.+$/', $GLOBALS['word']))) {
+    if (!($GLOBALS['res_filter']['method'] == 'regex' && preg_match('/^\.+$/', $GLOBALS['word']))) {
         require_once P2_LIB_DIR . '/strctl.class.php';
-        $GLOBALS['word_fm'] = StrCtl::wordForMatch($word, $res_filter['method']);
-        if ($res_filter['method'] != 'just') {
+        $GLOBALS['word_fm'] = StrCtl::wordForMatch($word, $GLOBALS['res_filter']['method']);
+        if ($GLOBALS['res_filter']['method'] != 'just') {
             if (P2_MBREGEX_AVAILABLE == 1) {
                 $GLOBALS['words_fm'] = mb_split('\s+', $GLOBALS['word_fm']);
                 $GLOBALS['word_fm'] = mb_ereg_replace('\s+', '|', $GLOBALS['word_fm']);
@@ -86,18 +100,16 @@ if (isset($GLOBALS['word']) && strlen($GLOBALS['word']) > 0) {
                 $GLOBALS['words_fm'] = preg_split('/\s+/', $GLOBALS['word_fm']);
                 $GLOBALS['word_fm'] = preg_replace('/\s+/', '|', $GLOBALS['word_fm']);
             }
+            $GLOBALS['word_fm'] = '(?:' . $GLOBALS['word_fm'] . ')';
         }
     }
     
-    if ($_conf['ktai']) {
+    if (UA::isK()) {
         $filter_page = isset($_REQUEST['filter_page']) ? max(1, intval($_REQUEST['filter_page'])) : 1;
         $filter_range = array();
         $filter_range['start'] = ($filter_page - 1) * $_conf['k_rnum_range'] + 1;
         $filter_range['to'] = $filter_range['start'] + $_conf['k_rnum_range'] - 1;
     }
-
-} else {
-    $GLOBALS['word'] = null;
 }
 
 // }}}
@@ -109,7 +121,7 @@ $cachefile = $_conf['pref_dir'] . '/p2_res_filter.txt';
 if (!isset($GLOBALS['word'])) {
 
     if (file_exists($cachefile) and $res_filter_cont = file_get_contents($cachefile)) {
-        $res_filter = unserialize($res_filter_cont);
+        $GLOBALS['res_filter'] = unserialize($res_filter_cont);
     }
     
 // フィルタ指定があれば
@@ -117,12 +129,9 @@ if (!isset($GLOBALS['word'])) {
 
     // ボタンが押されていたなら、ファイルに設定を保存
     if (isset($_REQUEST['submit_filter'])) { // !isset($_REQUEST['idpopup'])
-        FileCtl::make_datafile($cachefile, $_conf['p2_perm']);
-        if ($res_filter) {
-            $res_filter_cont = serialize($res_filter);
-        }
-        if ($res_filter_cont && empty($GLOBALS['popup_filter'])) {
-            if (false === file_put_contents($cachefile, $res_filter_cont, LOCK_EX)) {
+        if (empty($GLOBALS['popup_filter'])) {
+            FileCtl::make_datafile($cachefile, $_conf['p2_perm']);
+            if (false === file_put_contents($cachefile, serialize($GLOBALS['res_filter']), LOCK_EX)) {
                 die("Error: cannot write file.");
             }
         }
@@ -169,7 +178,6 @@ if (file_exists($aThread->keyidx)) {
 $aThread->getThreadInfoFromIdx();
 
 // }}}
-// {{{ preview >>1
 
 // preview >>1
 if (!empty($_GET['onlyone'])) {
@@ -177,8 +185,6 @@ if (!empty($_GET['onlyone'])) {
     _printPreview1Html($aThread, $params);
     return;
 }
-
-// }}}
 
 // DATのダウンロード
 if (empty($_GET['offline'])) {
@@ -193,6 +199,7 @@ if (empty($aThread->datlines) && !empty($_GET['offline'])) {
     $aThread->downloadDat();
     $aThread->readDat();
 }
+
 
 
 $aThread->setTitleFromLocal(); // タイトルを取得して設定
@@ -249,7 +256,7 @@ $aThread->lsToPoint();
 //===============================================================
 // HTMLプリント
 //===============================================================
-$ptitle_ht = hs($aThread->itaj) . ' / ' . $aThread->ttitle_hs;
+$ptitle_ht = hs($aThread->itaj) . ' / ' . hs($aThread->ttitle_hc);
 
 if ($_conf['ktai']) {
 
@@ -262,12 +269,13 @@ if ($_conf['ktai']) {
     require_once P2_IPHONE_LIB_DIR . '/read_header_k.inc.php';
     
     if ($aThread->rescount) {
-        require_once P2_IPHONE_LIB_DIR . '/showthreadk.class.php';
+        require_once P2_IPHONE_LIB_DIR . '/ShowThreadK.php';
         $aShowThread =& new ShowThreadK($aThread);
         $aShowThread->datToHtml();
     }
     
     // フッタプリント
+    
     if ($GLOBALS['_filter_hits'] !== NULL) {
         $params = array(
             'prev_st'      => $prev_st,
@@ -279,6 +287,7 @@ if ($_conf['ktai']) {
         $ar = getResetReadNaviFooterK($aThread, $params);
         extract($ar); // $read_navi_previous_btm, $read_navi_next_btm, $read_footer_navi_new_btm
     }
+    
     require_once P2_IPHONE_LIB_DIR . '/read_footer_k.inc.php';
     
 } else {
@@ -296,12 +305,10 @@ if ($_conf['ktai']) {
         $all = $aThread->rescount;
         
         $GLOBALS['_filter_hits'] = 0;
-        
-        $hits_line = "<p><b id=\"filerstart\">{$all}レス中 <span id=\"searching\">{$GLOBALS['filter_hits']}</span>レスがヒット</b></p>";
-        echo <<<EOP
+        ?>
 <script type="text/javascript">
 <!--
-document.writeln('{$hits_line}');
+document.writeln('<p><b id="filerstart"><?php eh($all); ?>レス中 <span id="searching"><?php eh($GLOBALS['_filter_hits']); ?></span>レスがヒット</b></p>');
 var searching = document.getElementById('searching');
 
 function filterCount(n){
@@ -311,14 +318,14 @@ function filterCount(n){
 }
 -->
 </script>
-EOP;
+<?php
     }
     
-    $debug && $profiler->enterSection("datToHtml");
+    $debug && $profiler->enterSection('datToHtml');
     
     if ($aThread->rescount) {
 
-        require_once P2_IPHONE_LIB_DIR . '/showthreadpc.class.php';
+        require_once P2_IPHONE_LIB_DIR . '/ShowThreadPc.php';
         $aShowThread =& new ShowThreadPc($aThread);
         
         $res1 = $aShowThread->quoteOne(); // >>1ポップアップ用
@@ -333,7 +340,7 @@ EOP;
     
     // フィルタ結果を表示
     if ($word && $aThread->rescount) {
-        echo <<<EOP
+        ?>
 <script type="text/javascript">
 <!--
 var filerstart = document.getElementById('filerstart');
@@ -342,10 +349,10 @@ if (filerstart) {
     filerstart.style.fontWeight = 'bold';
 }
 -->
-</script>\n
-EOP;
-        if ($GLOBALS['filter_hits'] > 5) {
-            echo "<p><b class=\"filtering\">{$all}レス中 {$GLOBALS['filter_hits']}レスがヒット</b></p>\n";
+</script>
+<?php
+        if ($GLOBALS['_filter_hits'] > 5) {
+            ?><p><b class="filtering"><?php eh($all); ?>レス中 <?php eh($GLOBALS['_filter_hits']); ?>レスがヒット</b></p><?php
         }
     }
     
@@ -354,7 +361,12 @@ EOP;
 
 }
 
+//=================================
+// 後処理
+//=================================
+
 // {{{ idxの値を設定、記録
+
 if ($aThread->rescount) {
     // 検索の時は、既読数を更新しない
     if (isset($GLOBALS['word']) and strlen($GLOBALS['word']) > 0) {
@@ -398,60 +410,68 @@ exit;
  *
  * @return  array|false
  */
-function detectThread()
+function _detectThread()
 {
     global $_conf;
     
     $ls = null;
     
     // スレURLの直接指定
-    if ((isset($_GET['nama_url']) and $url = $_GET['nama_url']) || (isset($_GET['url']) and $url = $_GET['url'])) { 
+    if (($url = geti($_GET['nama_url'])) || ($url = geti($_GET['url']))) { 
             
         $url = trim($url);
         
         // 2ch or pink - http://choco.2ch.net/test/read.cgi/event/1027770702/
-        if (preg_match('{http://([^/]+\.(2ch\.net|bbspink\.com))/test/read\.cgi/([^/]+)/([0-9]+)/?([^/]+)?}', $url, $matches)) {
+        if (preg_match('{http://([^/]+\\.(2ch\\.net|bbspink\\.com))/test/read\\.cgi/([^/]+)/([0-9]+)/?([^/]+)?}', $url, $matches)) {
             $host = $matches[1];
-            $bbs = $matches[3];
-            $key = $matches[4];
-            $ls = $matches[5];
+            $bbs  = $matches[3];
+            $key  = $matches[4];
+            $ls   = geti($matches[5]);
         
         // c-docomo c-au c-other http://c-au.2ch.net/test/--3!mail=sage/operate/1159594301/519-n
-        } elseif (preg_match('{http://((c-docomo|c-au|c-other)\.2ch\.net)/test/([^/]+)/([^/]+)/([0-9]+)/?([^/]+)?}', $url, $m)) {
+        } elseif (preg_match('{http://((c-docomo|c-au|c-other)\\.2ch\\.net)/test/([^/]+)/([^/]+)/([0-9]+)/?([^/]+)?}', $url, $m)) {
             require_once P2_LIB_DIR . '/BbsMap.class.php';
             if ($mapped_host = BbsMap::get2chHostByBbs($m[4])) {
                 $host = $mapped_host;
-                $bbs = $m[4];
-                $key = $m[5];
-                $ls = $m[6];
+                $bbs  = $m[4];
+                $key  = $m[5];
+                $ls   = geti($m[6]);
             }
         
         // 2ch or pink 過去ログhtml - http://pc.2ch.net/mac/kako/1015/10153/1015358199.html
-        } elseif ( preg_match("/(http:\/\/([^\/]+\.(2ch\.net|bbspink\.com))(\/[^\/]+)?\/([^\/]+)\/kako\/\d+(\/\d+)?\/(\d+)).html/", $url, $matches) ){ //2ch pink 過去ログhtml
+        } elseif (preg_match("/(http:\/\/([^\/]+\.(2ch\.net|bbspink\.com))(\/[^\/]+)?\/([^\/]+)\/kako\/\d+(\/\d+)?\/(\d+)).html/", $url, $matches) ){ //2ch pink 過去ログhtml
             $host = $matches[2];
-            $bbs = $matches[5];
-            $key = $matches[7];
+            $bbs  = $matches[5];
+            $key  = $matches[7];
             $kakolog_uri = $matches[1];
-            $_GET['kakolog'] = urlencode($kakolog_uri);
+            $_GET['kakolog'] = $kakolog_uri;
             
         // まち＆したらばJBBS - http://kanto.machibbs.com/bbs/read.pl?BBS=kana&KEY=1034515019
-        } elseif ( preg_match("/http:\/\/([^\/]+\.machibbs\.com|[^\/]+\.machi\.to)\/bbs\/read\.(pl|cgi)\?BBS=([^&]+)&KEY=([0-9]+)(&START=([0-9]+))?(&END=([0-9]+))?[^\"]*/", $url, $matches) ){
+        } elseif (preg_match("/http:\/\/([^\/]+\.machibbs\.com|[^\/]+\.machi\.to)\/bbs\/read\.(pl|cgi)\?BBS=([^&]+)&KEY=([0-9]+)(&START=([0-9]+))?(&END=([0-9]+))?[^\"]*/", $url, $matches) ){
             $host = $matches[1];
-            $bbs = $matches[3];
-            $key = $matches[4];
-            $ls = $matches[6] ."-". $matches[8];
+            $bbs  = $matches[3];
+            $key  = $matches[4];
+            $ls   = geti($matches[6]) ."-". geti($matches[8]);
+            
         } elseif (preg_match("{http://((jbbs\.livedoor\.jp|jbbs\.livedoor.com|jbbs\.shitaraba\.com)(/[^/]+)?)/bbs/read\.(pl|cgi)\?BBS=([^&]+)&KEY=([0-9]+)(&START=([0-9]+))?(&END=([0-9]+))?[^\"]*}", $url, $matches)) {
             $host = $matches[1];
-            $bbs = $matches[5];
-            $key = $matches[6];
-            $ls = $matches[8] ."-". $matches[10];
+            $bbs  = $matches[5];
+            $key  = $matches[6];
+            $ls   = geti($matches[8]) ."-". geti($matches[10]);
             
         // したらばJBBS http://jbbs.livedoor.com/bbs/read.cgi/computer/2999/1081177036/-100 
-        } elseif ( preg_match("{http://(jbbs\.livedoor\.jp|jbbs\.livedoor.com|jbbs\.shitaraba\.com)/bbs/read\.cgi/(\w+)/(\d+)/(\d+)/((\d+)?-(\d+)?)?[^\"]*}", $url, $matches) ){
+        } elseif (preg_match("{http://(jbbs\.livedoor\.jp|jbbs\.livedoor.com|jbbs\.shitaraba\.com)/bbs/read\.cgi/(\w+)/(\d+)/(\d+)/((\d+)?-(\d+)?)?[^\"]*}", $url, $matches) ){
             $host = $matches[1] . "/" . $matches[2];
-            $bbs = $matches[3];
-            $key = $matches[4];
-            $ls = $matches[5];
+            $bbs  = $matches[3];
+            $key  = $matches[4];
+            $ls   = geti($matches[5]);
+            
+        // 外部板 read.cgi 形式 http://ex14.vip2ch.com/test/read.cgi/operate/1161701941/ 
+        } elseif (preg_match('{http://([^/]+)/test/read\\.cgi/(\\w+)/(\\d+)/?([^/]+)?}', $url, $matches)) {
+            $host = $matches[1];
+            $bbs  = $matches[2];
+            $key  = $matches[3];
+            $ls   = geti($matches[4]);
         }
     
     } else {
@@ -464,6 +484,7 @@ function detectThread()
         !empty($_GET['ls'])     and $ls   = $_GET['ls'];    // "all"
         !empty($_POST['ls'])    and $ls   = $_POST['ls'];
     }
+    
     if (empty($host) || !isset($bbs) || !isset($key)) {
         $err = $_conf['read_php'] . ' スレッドの指定が変です。';
         $msg = null;
@@ -567,12 +588,17 @@ function _printPreview1Html(&$aThread, $params)
     }
     
     $body = $aThread->previewOne();
-    $ptitle_ht = hs($aThread->itaj) . ' / ' . $aThread->ttitle_hs;
+    $ptitle_ht = hs($aThread->itaj) . ' / ' . hs($aThread->ttitle_hc);
 
-    
+    // PC
+    if (empty($GLOBALS['_conf']['ktai'])) {
+        $read_header_inc_php = P2_LIB_DIR . '/read_header.inc.php';
+        $read_footer_inc_php = P2_LIB_DIR . '/read_footer.inc.php';
+    // 携帯
+    } else {
         $read_header_inc_php = P2_IPHONE_LIB_DIR . '/read_header_k.inc.php';
         $read_footer_inc_php = P2_IPHONE_LIB_DIR . '/read_footer_k.inc.php';
-    
+    }
     require_once $read_header_inc_php;
 
     echo $body;
