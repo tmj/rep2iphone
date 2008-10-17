@@ -20,18 +20,21 @@ $find_st        = '検索';
 $motothre_url   = $aThread->getMotoThread();
 $ttitle_en      = base64_encode($aThread->ttitle);
 $ttitle_urlen   = rawurlencode($ttitle_en);
-$ttitle_en_q    = "&amp;ttitle_en=" . $ttitle_en;
+
+// ↓$xxx_q は使わない方がよい
+$ttitle_en_q    = "&amp;ttitle_en=" . $ttitle_urlen;
 $bbs_q          = "&amp;bbs=" . $aThread->bbs;
 $key_q          = "&amp;key=" . $aThread->key;
 $offline_q      = "&amp;offline=1";
 
-$word_hs        = htmlspecialchars($GLOBALS['word'], ENT_QUOTES);
+$word_hs        = hs($GLOBALS['word']);
 
 $thread_qs = array(
     'host' => $aThread->host,
     'bbs'  => $aThread->bbs,
     'key'  => $aThread->key
 );
+
 
 $newtime = date('gis');  // 同じリンクをクリックしても再読込しない仕様に対抗するダミークエリー
 
@@ -93,7 +96,8 @@ $before_rnum = $aThread->resrange['start'] - $rnum_range;
 if ($before_rnum < 1) {
     $before_rnum = 1;
 }
-if ($aThread->resrange['start'] == 1 or !empty($_GET['onlyone'])) {
+if ($aThread->resrange['start'] == 1 or !empty($_GET['onlyone'])) 
+{
     $read_navi_prev_isInvisible = true;
 } else {
     $read_navi_prev_isInvisible = false;
@@ -210,11 +214,6 @@ if ($aThread->resrange['to'] == $aThread->rescount) {
         "{$shinchaku_st}"
     );
 }
-    // 新着
-    //$read_footer_navi_new = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}\">{$shinchaku_st}</a>";
-    
-    //$read_footer_navi_new_btm = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}#r{$aThread->rescount}\">{$shinchaku_st}</a>";
-    //$read_footer_navi_new_btm = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-n&amp;nt={$newtime}{$_conf['k_at_a']}\">{$shinchaku_st}</a>";
 
 
 if (!$read_navi_next_isInvisible || $GLOBALS['_filter_hits'] !== null) {
@@ -240,7 +239,7 @@ EOP;
 
 // }}}
 // {{{ 検索時の特別な処理
-if ($filter_hits !== NULL) {
+if ($_filter_hits !== NULL) {
     include P2_IPHONE_LIB_DIR . '/read_filter_k.inc.php';
     resetReadNaviHeaderK();
 }
@@ -264,10 +263,6 @@ $toolbar_right_ht = <<<EOTOOLBAR
     <li class="whiteButton"><a href="{$_conf['subject_php']}?host={$aThread->host}{$bbs_q}{$key_q}{$similar_q}{$_conf['k_at_a']}&amp;refresh=1">スレ情報/類似</a></li>
     <li class="whiteButton"><a href="{$motothre_url}">{$moto_thre_st}</a></li>
 EOTOOLBAR;
-/*
-<li class="whiteButton"><a href="info.php?host={$aThread->host}{$bbs_q}{$key_q}{$ttitle_en_q}{$_conf['k_at_a']}">{$info_st}</a> </li>
-    <li class="whiteButton"><a href="info.php?host={$aThread->host}{$bbs_q}{$key_q}{$ttitle_en_q}&amp;dele=1{$_conf['k_at_a']}">{$delete_st}</a> </li>
-*/
 
 //iPhone 用　板戻りボタン
 $toolbar_back_board =  <<<BAAACK
@@ -387,7 +382,7 @@ $existWord = (strlen($GLOBALS['word']) > 0) ? 'true' : 'false';
 if ($_conf['enable_spm']) {
     echo "\t<script type=\"text/javascript\" src=\"iphone/js/smartpopup.iPhone.js?v=20070308\"></script>\n";
 }
-
+///////
 echo <<<EOP
 <script type="text/javascript">
     <!--
@@ -428,7 +423,7 @@ if ($aThread->diedat) {
 
     $motothre_ht = "<a href=\"{$motothre_url}\">{$motothre_url}</a>";
 
-    echo "$diedat_msg<p>$motothre_ht</p><hr>";
+    echo "$diedat_msg<p>$motothre_atag</p>";
     
     // 既得レスがなければツールバー表示
     if (!$aThread->rescount) {
@@ -457,7 +452,7 @@ EOP;
 }
 
 //echo "<hr>";
-echo "<h3><font color=\"{$STYLE['read_k_thread_title_color']}\">{$aThread->ttitle_hd}</font></h3>\n";
+?><h3><font color="<?php eh($STYLE['read_k_thread_title_color']); ?>"><?php eh($aThread->ttitle); ?> </font></h3><?php
 
 $filter_fields = array(
         'hole'  => '',
@@ -480,6 +475,7 @@ if ($word) {
 //=====================================================================
 // 関数
 //=====================================================================
+// iPhone用に追加 
 /**
  * 1- のみ表示をselectフォームで表示する
  *

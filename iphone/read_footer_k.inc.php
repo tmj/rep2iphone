@@ -2,34 +2,40 @@
 /*
     p2 -  スレッド表示 -  フッタ部分 -  携帯用 for read.php
 */
-require_once P2_LIB_DIR . '/dataphp.class.php';
+//require_once P2_LIB_DIR . '/dataphp.class.php';
 //=====================================================================
 // フッタ
 //=====================================================================
 // 表示範囲
 if (isset($GLOBALS['word']) && $aThread->rescount) {
-    $filter_range['end'] = min($filter_range['to'], $filter_hits);
-    $read_range_on = "{$filter_range['start']}-{$filter_range['end']}/{$filter_hits}hit";
+    $filter_range['end'] = min($filter_range['to'], $_filter_hits);
+    $read_range_on = "{$filter_range['start']}-{$filter_range['end']}/{$_filter_hits}hit";
+
 } elseif ($aThread->resrange_multi) {
-    $read_range_on = htmlspecialchars($aThread->ls);
+    $read_range_on = hs($aThread->ls);
+
 } elseif ($aThread->resrange['start'] == $aThread->resrange['to']) {
     $read_range_on = $aThread->resrange['start'];
+
 } else {
-    $read_range_on = "{$aThread->resrange['start']}:{$aThread->resrange['to']}";
-}
-$hd['read_range'] = $read_range_on . '/' . $aThread->rescount;
-if (!empty($_GET['onlyone'])) {
-    $hd['read_range'] = 'ﾌﾟﾚﾋﾞｭｰ>>1';
+    $read_range_on = "{$aThread->resrange['start']}-{$aThread->resrange['to']}";
 }
 
-// レス番指定移動 etc.
+$read_range_hs = $read_range_on . '/' . $aThread->rescount;
+if (!empty($_GET['onlyone'])) {
+    $read_range_hs = 'プレビュー>>1';
+}
+
+// レス番指定移動 etc. iphone
 //$goto_ht = _kspform($aThread, isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to']);
 
+// フィルター表示 Edit 080727 by 240
+$seafrm_ht =  CreateFilterForm(isset($GLOBALS['word']) ? $last_hit_resnum : $aThread->resrange['to'], $aThread);
 $hr = P2View::getHrHtmlK();
 
 
 //=====================================================================
-// プリント
+// HTML出力
 //=====================================================================
 if (($aThread->rescount or !empty($_GET['onlyone']) && !$aThread->diedat)) { // and (!$_GET['renzokupop'])
 
