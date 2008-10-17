@@ -10,8 +10,9 @@ require_once './iphone/conf.inc.php';
 require_once P2_LIB_DIR . '/threadlist.class.php';
 require_once P2_LIB_DIR . '/thread.class.php';
 require_once P2_LIB_DIR . '/threadread.class.php';
-require_once P2_LIB_DIR . '/ngabornctl.class.php';
+require_once P2_LIB_DIR . '/NgAbornCtl.php';
 require_once P2_LIB_DIR . '/read_new.inc.php';
+require_once P2_LIB_DIR . '/P2Validate.php';
 
 $_login->authorize(); // ユーザ認証
 
@@ -34,18 +35,19 @@ $GLOBALS['rnum_all_range'] = $_conf['k_rnum_range'];
 $sb_view = "shinchaku";
 $newtime = date("gis");
 
-isset($_GET['host'])    and $host   = $_GET['host'];
-isset($_POST['host'])   and $host   = $_POST['host'];
-isset($_GET['bbs'])     and $bbs    = $_GET['bbs'];
-isset($_POST['bbs'])    and $bbs    = $_POST['bbs'];
-isset($_GET['spmode'])  and $spmode = $_GET['spmode'];
-isset($_POST['spmode']) and $spmode = $_POST['spmode'];
+$host   = geti($_GET['host'],   geti($_POST['host']));
+$bbs    = geti($_GET['bbs'],    geti($_POST['bbs']));
+$spmode = geti($_GET['spmode'], geti($_POST['spmode']));
 
 if ((empty($host) || !isset($bbs)) && !isset($spmode)) {
     p2die('必要な引数が指定されていません');
 }
 
+if (($host) && P2Validate::host($host) || ($bbs) && P2Validate::bbs($bbs) || ($spmode) && P2Validate::spmode($spmode)) {
+    p2die('不正な引数です');
+}
 
+$hr = P2View::getHrHtmlK();
 //====================================================================
 // メイン
 //====================================================================
@@ -55,7 +57,7 @@ register_shutdown_function('saveMatomeCache');
 $GLOBALS['_read_new_html'] = '';
 ob_start();
 
-$aThreadList =& new ThreadList();
+$aThreadList = new ThreadList;
 
 // 板とモードのセット
 if ($spmode) {
@@ -63,25 +65,46 @@ if ($spmode) {
         $aThreadList->setIta($host, $bbs, P2Util::getItaName($host, $bbs));
     }
     $aThreadList->setSpMode($spmode);
+
 } else {
     $aThreadList->setIta($host, $bbs, P2Util::getItaName($host, $bbs));
 
     // スレッドあぼーんリスト読込
-    $idx_host_dir = P2Util::idxDirOfHost($host);
-    $taborn_file = $idx_host_dir.'/'.$bbs.'/p2_threads_aborn.idx';
-    
-    if ($tabornlines = @file($taborn_file)) {
-        $ta_num = sizeOf($tabornlines);
-        foreach ($tabornlines as $l) {
-            $tarray = explode('<>', rtrim($l));
-            $ta_keys[ $tarray[1] ] = true;
-        }
-    }
+    $ta_keys = P2Util::getThreadAbornKeys($host, $bbs);
+    $ta_num = sizeOf($ta_keys);
 }
 
 // ソースリスト読込
 $lines = $aThreadList->readList();
+// ページヘッダ表示 ===================================
+$ptitle_hs = hs($aThreadList->ptitle);
+$ptitle_ht = "{$ptitle_hs} の 新着まとめ読み";
 
+$ptitle_uri = P2Util::buildQueryUri(
+    $_conf['subject_php'],
+    array(
+        'host'   => $aThreadList->host,
+        'bbs'    => $aThreadList->bbs,
+        'spmode' => $aThreadList->spmode,
+        UA::getQueryKey() => UA::getQueryValue()
+    )
+);
+
+$ptitle_atag = P2View::tagA(
+    $ptitle_uri,
+    hs($aThreadList->ptitle)
+);
+
+$ptitle_btm_atag = P2View::tagA(
+    $ptitle_uri,
+    hs("{$_conf['k_accesskey']['up']}.$aThreadList->ptitle"),
+    array(
+        $_conf['accesskey'] => $_conf['k_accesskey']['up']
+    )
+);
+
+$body_at = P2View::getBodyAttrK();
+/*
 // ページヘッダ表示 ===================================
 $ptitle_hs = htmlspecialchars($aThreadList->ptitle, ENT_QUOTES);
 $ptitle_ht = "{$ptitle_hs} の 新着まとめ読み";
@@ -109,7 +132,7 @@ if (!empty($STYLE['read_k_bgcolor'])) {
 }
 if (!empty($STYLE['read_k_color'])) {
     $body_at .= " text=\"{$STYLE['read_k_color']}\"";
-}
+}*/
 
 // ========================================================
 // require_once P2_LIB_DIR . '/read_header.inc.php';
@@ -206,7 +229,7 @@ EOP;
 
 echo <<<EOP
 <div class="toolbar">
-    <h1>{$sb_ht}の新まとめ</h1>
+    <h1>{$ptitle_atag}の新まとめ</h1>
 </div>
 EOP;
 P2Util::printInfoHtml();
@@ -214,6 +237,8 @@ P2Util::printInfoHtml();
 //==============================================================
 // それぞれの行解析
 //==============================================================
+
+$online_num = 0;
 
 $linesize = sizeof($lines);
 
@@ -231,21 +256,21 @@ for ($x = 0; $x < $linesize; $x++) {
     // データ読み込み
     if ($aThreadList->spmode) {
         switch ($aThreadList->spmode) {
-        case "recent":    // 履歴
+        case "recent": // 履歴
             $aThread->getThreadInfoFromExtIdxLine($l);
             break;
-        case "res_hist":    // 書き込み履歴
+        case "res_hist": // 書き込み履歴
             $aThread->getThreadInfoFromExtIdxLine($l);
             break;
-        case "fav":    // お気に
+        case "fav": // お気に
             $aThread->getThreadInfoFromExtIdxLine($l);
             break;
-        case "taborn":    // スレッドあぼーん
+        case "taborn": // スレッドあぼーん
             $aThread->getThreadInfoFromExtIdxLine($l);
             $aThread->host = $aThreadList->host;
             $aThread->bbs = $aThreadList->bbs;
             break;
-        case "palace":    // 殿堂入り
+        case "palace": // 殿堂入り
             $aThread->getThreadInfoFromExtIdxLine($l);
             break;
         }
@@ -265,33 +290,33 @@ for ($x = 0; $x < $linesize; $x++) {
     $aThread->setThreadPathInfo($aThread->host, $aThread->bbs, $aThread->key);
     $aThread->getThreadInfoFromIdx(); // 既得スレッドデータをidxから取得
 
-    // 新着のみ(for subject) =========================================
-    if (!$aThreadList->spmode and $sb_view == "shinchaku" and !$_GET['word']) { 
+    // 新着のみ(for subject)
+    if (!$aThreadList->spmode and $sb_view == "shinchaku" and !isset($GLOBALS['word'])) { 
         if ($aThread->unum < 1) {
             unset($aThread);
             continue;
         }
     }
 
-    // スレッドあぼーんチェック =====================================
-    if ($aThreadList->spmode != "taborn" and $ta_keys[$aThread->key]) { 
+    // スレッドあぼーんチェック
+    if ($aThreadList->spmode != "taborn" and !empty($ta_keys[$aThread->key])) { 
         unset($ta_keys[$aThread->key]);
         continue; // あぼーんスレはスキップ
     }
 
     // spmode(殿堂入りを除く)なら ====================================
-    if ($aThreadList->spmode && $sb_view != "edit") { 
+    if ($aThreadList->spmode && $sb_view != 'edit') { 
         
         // subject.txtが未DLなら落としてデータを配列に格納
-        if (!$subject_txts["$aThread->host/$aThread->bbs"]) {
-        
-            require_once P2_LIB_DIR . '/SubjectTxt.class.php';
+        if (empty($subject_txts) || !array_key_exists("$aThread->host/$aThread->bbs", $subject_txts)) {
+
+            require_once P2_LIB_DIR . '/SubjectTxt.php';
             $aSubjectTxt =& new SubjectTxt($aThread->host, $aThread->bbs);
 
             $subject_txts["$aThread->host/$aThread->bbs"] = $aSubjectTxt->subject_lines;
         }
         
-        // スレ情報取得 =============================
+        // スレ情報取得
         if ($subject_txts["$aThread->host/$aThread->bbs"]) {
             foreach ($subject_txts["$aThread->host/$aThread->bbs"] as $l) {
                 if (@preg_match("/^{$aThread->key}/", $l)) {
@@ -301,8 +326,8 @@ for ($x = 0; $x < $linesize; $x++) {
             }
         }
         
-        // 新着のみ(for spmode) ===============================
-        if ($sb_view == "shinchaku" and !$_GET['word']) {
+        // 新着のみ(for spmode)
+        if ($sb_view == 'shinchaku' and !isset($GLOBALS['word'])) {
             if ($aThread->unum < 1) {
                 unset($aThread);
                 continue;
@@ -316,12 +341,12 @@ for ($x = 0; $x < $linesize; $x++) {
     
     $GLOBALS['_read_new_html'] .= ob_get_flush();
     ob_start();
-        
+    
     if (($aThread->readnum < 1) || $aThread->unum) {
-        readNew($aThread);
+        _readNew($aThread);
     } elseif ($aThread->diedat) {
         echo $aThread->getdat_error_msg_ht;
-        //echo "<hr>\n";
+        //echo "{$hr}\n";
     }
     
     $GLOBALS['_read_new_html'] .= ob_get_flush();
@@ -338,12 +363,14 @@ for ($x = 0; $x < $linesize; $x++) {
 /**
  * スレッドの新着部分を読み込んで表示する
  */
-function readNew(&$aThread)
+function _readNew(&$aThread)
 {
     global $_conf, $_newthre_num, $STYLE;
     global $spmode;
 
     $_newthre_num++;
+
+    $hr = P2View::getHrHtmlK();
     
     //==========================================================
     // idxの読み込み
@@ -415,30 +442,35 @@ function readNew(&$aThread)
     //$next_thre_ht = "<a href=\"#ntt{$next_thre_num}\">▼</a> ";
     $next_thre_ht = "<a class=\"button\" href=\"#ntt_bt{$_newthre_num}\">▼</a> ";
     
-    $itaj_hs = htmlspecialchars($aThread->itaj, ENT_QUOTES);
-    
     if ($spmode) {
-        $read_header_itaj_ht = " ({$itaj_hs})";
+        $read_header_itaj_ht = sprintf(' (%s)', hs($aThread->itaj));
+        if ($_conf['k_save_packet']) {
+            $read_header_itaj_ht = mb_convert_kana($read_header_itaj_ht, 'rnsk');
+        }
     }
     
     P2Util::printInfoHtml();
     
+    $ttitle_hs = hs($aThread->ttitle_hc);
+    if ($_conf['k_save_packet']) {
+        $ttitle_hs = mb_convert_kana($ttitle_hs, 'rnsk');
+    }
+    
     $read_header_ht = <<<EOP
-        <p id="ntt{$_newthre_num}" name="ntt{$_newthre_num}"><font color="{$STYLE['read_k_thread_title_color']}"><b>{$aThread->ttitle_hd}</b></font>{$read_header_itaj_ht} {$next_thre_ht}</p>\n
+        <p id="ntt{$_newthre_num}" name="ntt{$_newthre_num}"><font color="{$STYLE['read_k_thread_title_color']}"><b>{$ttitle_hs}</b></font>{$read_header_itaj_ht} {$next_thre_ht}</p>\n
 EOP;
 
-    //==================================================================
-    // ローカルDatを読み込んでHTML表示
-    //==================================================================
+    // {{{ ローカルDatを読み込んでHTML表示
+
     $aThread->resrange['nofirst'] = true;
     $GLOBALS['newres_to_show_flag'] = false;
+    $read_cont_ht = '';
     if ($aThread->rescount) {
         //$aThread->datToHtml(); // dat を html に変換表示
-        require_once P2_LIB_DIR . '/showthread.class.php';
-        require_once P2_IPHONE_LIB_DIR . '/showthreadk.class.php';
-        $aShowThread =& new ShowThreadK($aThread);
+        require_once P2_LIB_DIR . '/ShowThreadK.php';
+        $aShowThread = new ShowThreadK($aThread);
         
-        $read_cont_ht .= $aShowThread->getDatToHtml();
+        $read_cont_ht = $aShowThread->getDatToHtml();
         
         unset($aShowThread);
     }
@@ -446,14 +478,14 @@ EOP;
     //==================================================================
     // フッタ 表示
     //==================================================================
-    //include $read_footer_inc;
+    // require_once P2_LIB_DIR . '/read_footer.inc.php';
     
     //----------------------------------------------
     // $read_footer_navi_new  続きを読む 新着レスの表示
     $newtime = date("gis");  // リンクをクリックしても再読込しない仕様に対抗するダミークエリー
     
     $info_st = "情";
-    $delete_st = "削";
+    $dele_st = "削";
     $prev_st = "前";
     $next_st = "次";
 
@@ -464,33 +496,34 @@ EOP;
         $read_range_on = "{$aThread->resrange['start']}-{$aThread->resrange['to']}";
     }
     $read_range_ht = "{$read_range_on}/{$aThread->rescount}<br>";
-
-    $read_footer_navi_new = "<a href=\"{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;ls={$aThread->rescount}-&amp;nt={$newtime}{$_conf['k_at_a']}#r{$aThread->rescount}\">新着ﾚｽの表示</a>";
     
-    if (!empty($_conf['disable_res'])) {
-        $dores_ht = <<<EOP
-          <a href="{$motothre_url}" target="_blank">ﾚｽ</a>
-EOP;
-    } else {
-        $dores_ht = <<<EOP
-        <a href="post_form.php_i?host={$aThread->host}{$bbs_q}{$key_q}&amp;rescount={$aThread->rescount}{$ttitle_en_q}{$_conf['k_at_a']}">ﾚｽ</a>
-EOP;
-    }
     
-    // ツールバー部分HTML =======
+    // {{{ ツールバー部分HTML
+    
     if ($spmode) {
-        $toolbar_itaj_ht = <<<EOP
-(<a href="{$_conf['subject_php']}?host={$aThread->host}{$bbs_q}{$key_q}{$_conf['k_at_a']}">{$itaj_hs}</a>)
-EOP;
+        $ita_atag = _getItaATag($aThread);
+        $toolbar_itaj_ht = " ($ita_atag)";
+        if ($_conf['k_save_packet']) {
+            $toolbar_itaj_ht = mb_convert_kana($toolbar_itaj_ht, 'rnsk');
+        }
     }
-    $toolbar_right_ht .= <<<EOTOOLBAR
-            <a href="info.php_i?host={$aThread->host}{$bbs_q}{$key_q}{$ttitle_en_q}{$_conf['k_at_a']}">{$info_st}</a> 
-            <a href="info.php_i?host={$aThread->host}{$bbs_q}{$key_q}{$ttitle_en_q}&amp;dele=true{$_conf['k_at_a']}">{$delete_st}</a> 
-            <a href="{$motothre_url}">元ｽﾚ</a>\n
-EOTOOLBAR;
-
+    
+    /*
+    $info_atag = _getInfoATag($aThread, $info_st);
+    $dele_atag = _getDeleATag($aThread, $dele_st);
+    $motothre_atag = P2View::tagA($motothre_url, '元ｽﾚ')
+    $toolbar_right_ht = "{$info_atag} {$dele_atag} {$motothre_atag}\n";
+    */
+    // }}}
+    
+    $read_atag = _getReadATag($aThread);
+    
     $read_footer_ht = <<<EOP
-            <a class="button" id="backbutton"href="{$_conf['read_php']}?host={$aThread->host}{$bbs_q}{$key_q}&amp;offline=1&amp;rescount={$aThread->rescount}{$_conf['k_at_a']}#r{$aThread->rescount}">{$aThread->ttitle_hd}</a>
+        <div id="ntt_bt{$_newthre_num}" name="ntt_bt{$_newthre_num}">
+            $read_range_ht 
+            $read_atag{$toolbar_itaj_ht} 
+            <a href="#ntt{$_newthre_num}">▲</a>
+        </div>
 EOP;
 
     // 透明あぼーんや表示数制限で新しいレス表示がない場合はスキップ
@@ -500,21 +533,24 @@ EOP;
         echo $read_footer_ht;
     }
 
-    //==================================================================
-    // key.idxの値設定
-    //==================================================================
+    // {{{ key.idxの値設定
+
     if ($aThread->rescount) {
     
         $aThread->readnum = min($aThread->rescount, max(0, $data[5], $aThread->resrange['to']));
         
-        $newline = $aThread->readnum + 1; // $newlineは廃止予定だが、旧互換用に念のため
-        
-        $sar = array($aThread->ttitle, $aThread->key, $data[2], $aThread->rescount, $aThread->modified,
-                    $aThread->readnum, $data[6], $data[7], $data[8], $newline,
-                    $data[10], $data[11], $aThread->datochiok);
+        $newline = $aThread->readnum + 1; // $newlineは廃止予定だが、後方互換用に念のため
+
+        $sar = array(
+            $aThread->ttitle, $aThread->key, $data[2], $aThread->rescount, $aThread->modified,
+            $aThread->readnum, $data[6], $data[7], $data[8], $newline,
+            $data[10], $data[11], $aThread->datochiok
+        );
         P2Util::recKeyIdx($aThread->keyidx, $sar); // key.idxに記録
     }
-
+    
+    // }}}
+    
     unset($aThread);
 }
 
@@ -525,8 +561,10 @@ $_newthre_num++;
 
 if (!$aThreadList->num) {
     $GLOBALS['matome_naipo'] = TRUE;
-    echo "新着ﾚｽはないぽ";
+    echo "新着レスはないぽ";
 }
+
+
 echo <<<EOP
 <div id="footbar01">
 <div class="footbar">
@@ -563,7 +601,7 @@ echo <<<EOP
 <div id="footbar02" class="dialog_other">
 <filedset>
  <ul>
- <li class="whiteButton">{$sb_ht_btm}</li> 
+ <li class="whiteButton">{$ptitle_btm_atag}</li> 
  <li class="grayButton" onclick="all.item('footbar02').style.visibility='hidden'">キャンセル</li>
  </ul>
  </filedset>
@@ -576,3 +614,134 @@ $GLOBALS['_read_new_html'] .= ob_get_flush();
 
 // NGあぼーんを記録
 NgAbornCtl::saveNgAborns();
+
+
+exit;
+
+
+//==========================================================================
+// 関数（このファイル内でのみ利用）
+//==========================================================================
+/**
+ * @return  string  HTML
+ */
+function _getItaATag($aThread)
+{
+    global $_conf;
+    
+    return $ita_atag = P2View::tagA(
+        P2Util::buildQueryUri(
+            $_conf['subject_php'],
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                UA::getQueryKey() => UA::getQueryValue()
+            )
+        ),
+        hs($aThread->itaj)
+    );
+}
+
+/**
+ * @return  string  HTML
+ */
+function _getReadATag($aThread)
+{
+    global $_conf;
+    
+    $ttitle_hs = hs($aThread->ttitle_hc);
+    if ($_conf['k_save_packet']) {
+        $ttitle_hs = mb_convert_kana($ttitle_hs, 'rnsk');
+    }
+    
+    return $read_atag = P2View::tagA(
+        P2Util::buildQueryUri(
+            $_conf['read_php'],
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                'offline' => '1',
+                'rescount' => $aThread->rescount,
+                UA::getQueryKey() => UA::getQueryValue()
+            )
+        ) . '#r' . rawurlencode($aThread->rescount),
+        $ttitle_hs
+    );
+}
+
+/**
+ * @return  string  HTML
+ */
+/*
+function _getInfoATag($aThread, $info_st)
+{
+    return $info_atag = P2View::tagA(
+        P2Util::buildQueryUri(
+            'info.php',
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                'ttitle_en' => base64_encode($aThread->ttitle),
+                UA::getQueryKey() => UA::getQueryValue()
+            ),
+            hs($info_st)
+        )
+    );
+}
+*/
+
+/**
+ * @return  string  HTML
+ */
+/*
+function _getDeleATag($aThread, $dele_st)
+{
+    return $dele_atag = P2View::tagA(
+        P2Util::buildQueryUri(
+            'info.php',
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                'ttitle_en' => base64_encode($aThread->ttitle),
+                'dele' => '1',
+                UA::getQueryKey() => UA::getQueryValue()
+            ),
+            hs($dele_st)
+        )
+    );
+}
+*/
+
+/**
+ * @return  string  HTML
+ */
+/*
+function _getDoResATag($aThread, $motothre_url)
+{
+    global $_conf;
+    
+    if (!empty($_conf['disable_res'])) {
+        $dores_atag = P2View::tagA($motothre_url, '書', array('target' => '_blank'));
+    } else {
+        $dores_atag = P2View::tagA(
+            P2Util::buildQueryUri(
+                'post_form.php',
+                array(
+                    'host' => $aThread->host,
+                    'bbs'  => $aThread->bbs,
+                    'key'  => $aThread->key,
+                    'rescount' => $aThread->rescount,
+                    'ttitle_en' => base64_encode($aThread->ttitle),
+                    UA::getQueryKey() => UA::getQueryValue()
+                )
+            ),
+            '書'
+        );
+    }
+    return $dores_atag;
+}
+*/

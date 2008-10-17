@@ -452,7 +452,7 @@ EOP;
 }
 
 //echo "<hr>";
-?><h3><font color="<?php eh($STYLE['read_k_thread_title_color']); ?>"><?php eh($aThread->ttitle); ?> </font></h3><?php
+?><h3><font color="<?php eh($STYLE['read_k_thread_title_color']); ?>"><?php eh($aThread->ttitle); ?></font></h3><?php
 
 $filter_fields = array(
         'hole'  => '',

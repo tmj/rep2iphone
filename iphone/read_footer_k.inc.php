@@ -143,7 +143,7 @@ $sid_q = defined('SID') ? '&amp;' . strip_tags(SID) : '';
 EOP;
 /* ------------------------------------------------------------ */
     if ($diedat_msg) {
-        echo '<hr>';
+        //echo '<hr>';
         echo $diedat_msg;
         echo '<p>';
         echo  $motothre_ht;

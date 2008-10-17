@@ -590,18 +590,13 @@ function _printPreview1Html(&$aThread, $params)
     $body = $aThread->previewOne();
     $ptitle_ht = hs($aThread->itaj) . ' / ' . hs($aThread->ttitle_hc);
 
-    // PC
-    if (empty($GLOBALS['_conf']['ktai'])) {
-        $read_header_inc_php = P2_LIB_DIR . '/read_header.inc.php';
-        $read_footer_inc_php = P2_LIB_DIR . '/read_footer.inc.php';
-    // Œg‘Ñ
-    } else {
+  
         $read_header_inc_php = P2_IPHONE_LIB_DIR . '/read_header_k.inc.php';
         $read_footer_inc_php = P2_IPHONE_LIB_DIR . '/read_footer_k.inc.php';
-    }
+    
     require_once $read_header_inc_php;
 
     echo $body;
-    
+
     require_once $read_footer_inc_php;
 }
