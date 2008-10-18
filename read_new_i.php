@@ -467,7 +467,7 @@ EOP;
     $read_cont_ht = '';
     if ($aThread->rescount) {
         //$aThread->datToHtml(); // dat ‚ð html ‚É•ÏŠ·•\Ž¦
-        require_once P2_LIB_DIR . '/ShowThreadK.php';
+        require_once P2_IPHONE_LIB_DIR . '/ShowThreadK.php';
         $aShowThread = new ShowThreadK($aThread);
         
         $read_cont_ht = $aShowThread->getDatToHtml();

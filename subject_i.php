@@ -623,7 +623,11 @@ if ($_conf['ktai']) {
     
     // ヘッダHTMLプリント
     require_once P2_IPHONE_LIB_DIR . '/sb_header_k.inc.php';
-
+    
+    if (isset($sb_filter['method']) and $sb_filter['method'] == 'similar') {
+        require_once './info_i.php';
+    }
+    
     // メインHTMLプリント
     echo '<ul><li class="group">スレ一覧</li>';
     require_once P2_IPHONE_LIB_DIR . '/sb_print_k.inc.php'; // スレッドサブジェクトメイン部分HTML表示関数
@@ -993,12 +997,12 @@ function _getSbScore($words, $length)
  */
 function _setSbSimilarity(&$aThread)
 {
-    $common_words = array_intersect(wakati($aThread->ttitle_hc), $GLOBALS['wakati_words']);
+    $common_words = array_intersect(_wakati($aThread->ttitle_hc), $GLOBALS['wakati_words']);
     if (!$common_words) {
         $aThread->similarity = 0.0;
         return false;
     }
-    $score = getSbScore($common_words, mb_strlen($aThread->ttitle_hc, 'SJIS-win'));
+    $score = _getSbScore($common_words, mb_strlen($aThread->ttitle_hc, 'SJIS-win'));
     $aThread->similarity = $score / $GLOBALS['wakati_score'];
     // debug (title 属性)
     //$aThread->ttitle_hd = mb_convert_encoding(htmlspecialchars(implode(' ', $common_words)), 'SJIS-win', 'UTF-8');
@@ -1042,7 +1046,7 @@ function _wakati($str)
     $str = mb_convert_kana($str, 'KVas', 'UTF-8');
     $str = mb_strtolower($str, 'UTF-8');
 
-    $array = preg_split(getWakatiRegex(), $str, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+    $array = preg_split(_getWakatiRegex(), $str, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
 
     $array = array_filter(array_map('trim', $array), 'strlen');
 

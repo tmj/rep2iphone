@@ -2,13 +2,19 @@
 /*
     p2 - スレッド情報ウィンドウ
 */
-if($_GET['i']){
+
+/*
+iphone からスレ情報を取得するときはsubject_iから呼び出される。
+（類似スレと同時に表示させてるため）
+一部ファイルを二重に読み込まないようにした。
+*/
+if($_GET['b']){
     require_once './conf/conf.inc.php';
     require_once P2_LIB_DIR . '/thread.class.php';
     require_once P2_LIB_DIR . '/filectl.class.php';
 }
 require_once P2_LIB_DIR . '/dele.inc.php'; // 削除処理用の関数郡
-$_conf['k_at_a'] = '&i=k';
+$_conf['k_at_a'] = '&b=15';
 $_login->authorize(); // ユーザ認証
 
 //================================================================
@@ -32,6 +38,8 @@ $title_msg = '';
 //================================================================
 // 特別な前処理
 //================================================================
+$info_msg = '';
+
 // {{{ 削除
 
 if (!empty($_GET['dele'])) {
@@ -112,11 +120,6 @@ if (!$ttitle_en) {
         //$ttitle_urlen = rawurlencode($ttitle_en);
     }
 }
-if ($ttitle_en) {
-    $ttitle_en_ht = '&amp;ttitle_en=' . rawurlencode($ttitle_en);
-} else {
-    $ttitle_en_ht = '';
-}
 
 if (!is_null($aThread->ttitle_hc)) {
     $hc['ttitle_name'] = $aThread->ttitle_hc;
@@ -143,22 +146,8 @@ if ($favlines = @file($_conf['favlist_file'])) {
 }
 */
 
-$favmark_accesskey = '9';
-
-$favmark = $aThread->fav ? "★" : "+";
-
-$favmark_pre_ht = '';
-if ($_conf['ktai']) {
-    $favmark_pre_ht = "{$favmark_accesskey}.";
-}
-
-$favmark_ht = "<span class=\"fav\">$favmark</span>";
-
-$favdo = $aThread->fav ? 0 : 1;
-
-$fav_ht = <<<EOP
-<a href="info_i.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;setfav={$favdo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}" >{$favmark_ht}</a>
-EOP;
+// お気にスレ
+$fav_atag = _getFavAtag($aThread, $favmark_accesskey, $ttitle_en);
 
 // }}}
 // {{{ palace チェック
@@ -193,35 +182,41 @@ if ($isPalace) {
 // {{{ スレッドあぼーんチェック
 
 // スレッドあぼーんリスト読込
-$idx_host_dir = P2Util::idxDirOfHost($host);
-$taborn_file = $idx_host_dir . '/' . $bbs . '/p2_threads_aborn.idx';
-if ($tabornlist = @file($taborn_file)) {
-    foreach ($tabornlist as $l) {
-        $tarray = explode('<>', rtrim($l));
-        if ($aThread->key == $tarray[1]) {
-            $isTaborn = true;
-            break;
-        }
-    }
-}
+$ta_keys = P2Util::getThreadAbornKeys($aThread->host, $aThread->bbs);
+$isTaborn = empty($ta_keys[$aThread->key]) ? false : true;
 
-$taborndo_title_at = '';
-if (!empty($isTaborn)) {
-    $tastr1 = "あぼーん中";
-    $tastr2 = "あぼーん解除する";
-    $taborndo = 0;
-} else {
-    $tastr1 = "通常";
-    $tastr2 = "あぼーんする";
-    $taborndo = 1;
-    if (empty($_conf['ktai'])) {
-        $taborndo_title_at = ' title="スレッド一覧で非表示にします"';
-    }
-}
 
-$taborn_ht = <<<EOP
-{$tastr1} [<a href="info_i.php?host={$aThread->host}&bbs={$aThread->bbs}&key={$aThread->key}&amp;taborn={$taborndo}{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}"{$taborndo_title_at}>{$tastr2}</a>]
-EOP;
+$taborndo_title_attrs = array();
+if (UA::isPC() and !$isTaborn) {
+    $taborndo_title_attrs = array('title' => 'スレッド一覧で非表示にします');
+}
+$atag = P2View::tagA(
+    P2Util::buildQueryUri('info_i.php',
+        array(
+            'host' => $aThread->host,
+            'bbs'  => $aThread->bbs,
+            'key'  => $aThread->key,
+            'taborn' => $isTaborn ? 0 : 1,
+            'popup' => (int)(bool)geti($_GET['popup']),
+            'ttitle_en' => $ttitle_en,
+            UA::getQueryKey() => UA::getQueryValue(),
+            'b' => '15'
+        )
+    ),
+    sprintf(
+        '%s%s',
+        hs(UA::isK() ? $taborn_accesskey . '.' : ''),
+        hs($isTaborn ? 'あぼーん解除する' : 'あぼーんする')
+    ),
+    array_merge($taborndo_title_attrs, array('accesskey' => $taborn_accesskey))
+);
+
+$taborn_ht = sprintf(
+    '%s [%s]', 
+    hs($isTaborn ? 'あぼーん中' : '通常'),
+    $atag
+);
+
 
 // }}}
 
@@ -233,21 +228,8 @@ if (file_exists($aThread->keydat) or file_exists($aThread->keyidx)) {
 //=================================================================
 // HTMLプリント
 //=================================================================
-if (!$_conf['ktai']) {
-    $target_read_at = ' target="read"';
-    $target_sb_at = ' target="subject"';
-} else {
-    $target_read_at = '';
-    $target_sb_at = '';
-}
-
 $motothre_url = $aThread->getMotoThread();
-if (P2Util::isHost2chs($aThread->host)) {
-    $motothre_org_url = $aThread->getMotoThread(true);
-} else {
-    $motothre_org_url = $motothre_url;
-}
-
+$motothre_org_url = $aThread->getMotoThread(true);
 
 if ($title_msg) {
     $hc['title'] = $title_msg;
@@ -257,9 +239,13 @@ if ($title_msg) {
 
 $hs = array_map('htmlspecialchars', $hc);
 
-if($_GET['i']){
 
-P2Util::header_nocache();
+$hs = array_map('htmlspecialchars', $hc);
+
+//ここも重複しないように
+if($_GET['b']){
+P2Util::headerNoCache();
+P2View::printDoctypeTag();
 echo $_conf['doctype'];
 echo <<<EOHEADER
 <html>
@@ -284,7 +270,7 @@ EOP;
 } else {
     $body_onload = '';
 }
-if($_GET['i']){
+if($_GET['b']){
 
     //html プリントヘッド iPhone用
 echo <<<EOP
@@ -307,9 +293,9 @@ echo <<<EOP
 <fieldset>
 EOP;
 // 携帯なら冒頭で情報メッセージ表示
-if ($_conf['ktai']) {
-    if (!empty($info_msg)) {
-        echo "<p>" . $info_msg . "</p>\n";
+if (UA::isK()) {
+    if (strlen($info_msg)) {
+        printf('<p>%s</p>', hs($info_msg));
     }
 }
 
@@ -324,36 +310,80 @@ if (checkRecent($aThread->host, $aThread->bbs, $aThread->key) or checkResHist($a
 $dele_pre_ht = '';
 $up_pre_ht = '';
 
-printInfoTrHtml("板", "<a href=\"{$_conf['subject_php']}?host={$aThread->host}&amp;bbs={$aThread->bbs}{$_conf['k_at_a']}\"{$target_sb_at} >{$hs['itaj']}</a>");
+$offrecent_ht = '';
+if (checkRecent($aThread->host, $aThread->bbs, $aThread->key) or checkResHist($aThread->host, $aThread->bbs, $aThread->key)) {
+    $atag = _getOffRecentAtag($aThread, $offrecent_accesskey, $ttitle_en);
+    $offrecent_ht = " / [$atag]";
+}
 
-//printInfoTrHtml("key", $aThread->key);
+_printInfoTrHtml(
+    '元スレ',
+    P2View::tagA(
+        $motothre_url,
+        hs($motothre_url),
+        UA::isPC() ? array('target' => 'read') : array()
+    )
+);
+
+if (UA::isPC()) {
+    _printInfoTrHtml("ホスト", $aThread->host);
+}
+
+// 板
+$ita_uri = P2Util::buildQueryUri(
+    $_conf['subject_php'],
+    array(
+        'host' => $aThread->host,
+        'bbs'  => $aThread->bbs,
+        UA::getQueryKey() => UA::getQueryValue(),
+        'b' => '15'
+    )
+);
+$attrs =  array($_conf['accesskey'] => $_conf['k_accesskey']['up']);
+UA::isPC() and $attrs['target'] = 'subject';
+$ita_atag = P2View::tagA(
+    $ita_uri,
+    "{$up_pre_ht}{$hs['itaj']}",
+    $attrs
+);
+_printInfoTrHtml('板', $ita_atag);
 
 if ($existLog) {
-    printInfoTrHtml("ログ", "あり [<a href=\"info_i.php?host={$aThread->host}&amp;bbs={$aThread->bbs}&amp;key={$aThread->key}&amp;dele=true{$popup_ht}{$ttitle_en_ht}{$_conf['k_at_a']}\">削除する</a>]{$offrec_ht}");
+    $atag = P2View::tagA(
+        P2Util::buildQueryUri('info_i.php',
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                'dele' => '1',
+                'popup' => (int)(bool)geti($_GET['popup']),
+                'ttitle_en' => $ttitle_en,
+                UA::getQueryKey() => UA::getQueryValue(),
+                'b' => '15'
+            )
+        ),
+        "{$dele_pre_ht}削除する",
+        array($_conf['accesskey'] => $_conf['k_accesskey']['dele'])
+    );
+    _printInfoTrHtml("ログ", "あり [$atag]{$offrecent_ht}");
+
 } else {
-    printInfoTrHtml("ログ", "未取得{$offrec_ht}");
+    _printInfoTrHtml("ログ", "未取得{$offrecent_ht}");
 }
 
 if ($aThread->gotnum) {
-    printInfoTrHtml("既得レス数", $aThread->gotnum);
+    _printInfoTrHtml("既得レス数", $aThread->gotnum);
+
 } elseif (!$aThread->gotnum and $existLog) {
-    printInfoTrHtml("既得レス数", "0");
+    _printInfoTrHtml("既得レス数", "0");
+
 } else {
-    printInfoTrHtml("既得レス数", "-");
+    _printInfoTrHtml("既得レス数", "-");
 }
 
-
-printInfoTrHtml("お気にスレ", $fav_ht);
-printInfoTrHtml("殿堂入り", $pal_ht);
-printInfoTrHtml("表示", $taborn_ht);
-
-
-// PC用情報メッセージ表示
-if ($_conf['ktai']) {
-    if (!empty($info_msg)) {
-        echo "<span class=\"infomsg\">" . $info_msg . "</span>\n";
-    }
-}
+_printInfoTrHtml("お気にスレ", $fav_atag);
+_printInfoTrHtml("殿堂入り", $pal_ht);
+_printInfoTrHtml("表示", $taborn_ht);
 
 
 /*
@@ -382,7 +412,7 @@ EOP;
 // }}}
 
 echo '</filedset></div>';
-if($_GET['i']){
+if($_GET['b']){
     echo '</body></html>';
 }
 
@@ -397,7 +427,7 @@ if($_GET['i']){
  *
  * @return  void
  */
-function printInfoTrHtml($s, $c_ht)
+function _printInfoTrHtml($s, $c_ht)
 {
     global $_conf;
     
@@ -410,7 +440,7 @@ function printInfoTrHtml($s, $c_ht)
  *
  * @return  string
  */
-function getCopypaFormHtml($url, $ttitle_name_hd)
+function _getCopypaFormHtml($url, $ttitle_name_hd)
 {
     global $_conf;
     
@@ -419,23 +449,11 @@ function getCopypaFormHtml($url, $ttitle_name_hd)
     $me_url = $me_url = P2Util::getMyUrl();
     // $_SERVER['REQUEST_URI']
     
-    if ($_conf['ktai']) {
         $htm = <<<EOP
 <form action="{$me_url}">
  <textarea name="copy" rows="5" cols="50">{$ttitle_name_hd}&#10;{$url_hs}</textarea>
 </form>
 EOP;
-    } else {
-    
-    //  onMouseover="select();"
-    $htm = <<<EOP
-<div title="コピペ用フォーム">
-<form action="{$me_url}" style="display:inline">
- <textarea name="copy" cols="56">{$ttitle_name_hd}&#10;{$url_hs}</textarea>
-</form>
-</div>
-EOP;
-    }
     
 // <input type="text" name="url" value="{$url_hs}">
 // <textarea name="msg_txt">{$msg_txt}</textarea><br>
@@ -443,3 +461,86 @@ EOP;
     return $htm;
 }
 
+/**
+ * @return  string  HTML
+ */
+function _getFavAtag($aThread, $favmark_accesskey, $ttitle_en)
+{
+    global $_conf;
+    
+    return P2View::tagA(
+        P2Util::buildQueryUri('info_i.php',
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                'setfav' => $aThread->fav ? 0 : 1,
+                'popup' => (int)(bool)geti($_GET['popup']),
+                'ttitle_en' => $ttitle_en,
+                UA::getQueryKey() => UA::getQueryValue(),
+                'b' => '15'
+            )
+        ),
+        sprintf(
+            '%s<span class="fav">%s</span>',
+            hs(UA::isK() ? $favmark_accesskey . '.' : ''),
+            hs($aThread->fav ? '★' : '+')
+        ),
+        array('accesskey' => $favmark_accesskey)
+    );
+}
+
+/**
+ * @return  string  HTML
+ */
+function _getTtitleNameAtag($aThread, $ttitle_name)
+{
+    global $_conf;
+    
+    $attrs = array('class' => 'thre_title');
+    if (UA::isPC()) {
+        $attrs['target'] = 'read';
+    }
+    
+    return P2View::tagA(
+        P2Util::buildQueryUri($_conf['read_php'],
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                UA::getQueryKey() => UA::getQueryValue(),
+                'b' => '15'
+            )
+        ),
+        hs($ttitle_name) . ' ',
+        $attrs
+    );
+}
+
+/**
+ * @return  string  HTML
+ */
+function _getOffRecentAtag($aThread, $offrecent_accesskey, $ttitle_en)
+{
+    global $_conf;
+    
+    return P2View::tagA(
+        P2Util::buildQueryUri('info_i.php',
+            array(
+                'host' => $aThread->host,
+                'bbs'  => $aThread->bbs,
+                'key'  => $aThread->key,
+                'offrecent' => '1',
+                'popup' => (int)(bool)geti($_GET['popup']),
+                'ttitle_en' => $ttitle_en,
+                UA::getQueryKey() => UA::getQueryValue(),
+                'b' => '15'
+            )
+        ),
+        sprintf('%s履歴から外す', hs(UA::isK() ? $offrecent_accesskey . '.' : '')),
+        array(
+            'title' => 'このスレを「最近読んだスレ」と「書き込み履歴」から外します',
+            'accesskey' => $offrecent_accesskey
+        )
+    );
+}
