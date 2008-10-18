@@ -99,11 +99,11 @@ $modori_url_ht = '';
 
 if (strlen($GLOBALS['word']) > 0) {
 
-    ?>î¬ÿΩƒåüçıåãâ 
+    ?><div class="panel"><h2>
     <?php
     if ($GLOBALS['ita_mikke']['num']) {
-        printf('<br>"%s" %dhit!', hs($GLOBALS['word']), $GLOBALS['ita_mikke']['num']);
-        echo $hr;
+        printf('"%s" %dhit!</h2>', hs($GLOBALS['word']), $GLOBALS['ita_mikke']['num']);
+        echo '</div>';
     }
     
     // î¬ñºÇåüçıÇµÇƒï\é¶Ç∑ÇÈ
@@ -114,10 +114,10 @@ if (strlen($GLOBALS['word']) > 0) {
     }
 
     if (!$GLOBALS['ita_mikke']['num']) {
-        P2Util::pushInfoHtml(sprintf('<p>"%s"Çä‹Çﬁî¬ÇÕå©Ç¬Ç©ÇËÇ‹ÇπÇÒÇ≈ÇµÇΩÅB</p>', hs($GLOBALS['word'])));
+        P2Util::pushInfoHtml(sprintf('"%s"Çä‹Çﬁî¬ÇÕå©Ç¬Ç©ÇËÇ‹ÇπÇÒÇ≈ÇµÇΩÅB', hs($GLOBALS['word'])));
     }
     $atag = P2View::tagA(
-        P2Util::buildQueryUri('menu_k.php',
+        P2Util::buildQueryUri('menu_i.php',
             array(
                 'view' => 'cate',
                 'nr'   => '1',

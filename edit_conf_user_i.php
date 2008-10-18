@@ -48,8 +48,9 @@ if (!empty($_POST['submit_save'])) {
                 $conf_save[$k] = $_POST['conf_edit'][$k];
             }
             
-        // 特別（edit_conf_user.php 以外でも設定されうるものは残す）
-        } elseif (in_array($k, array('maru_kakiko'))) {
+        // 特別な項目（edit_conf_user.php 以外でも設定されうるものは破棄せずにそのまま残す）
+        // キーに命名規則（prefix）をつけた方がいいかも → キー名変更の必要があるので却下
+        } elseif (in_array($k, array('k_use_aas', 'maru_kakiko', 'index_menu_k', 'index_menu_k_from1'))) {
             $conf_save[$k] = $_conf[$k];
         }
     }
@@ -87,7 +88,6 @@ $ptitle = 'ユーザ設定編集';
 
 $csrfid = P2Util::getCsrfId();
 
-$me = P2Util::getMyUrl();
 
 //=====================================================================
 // プリント
@@ -95,10 +95,10 @@ $me = P2Util::getMyUrl();
 // ヘッダHTMLをプリント
 P2Util::headerNoCache();
 P2View::printDoctypeTag();
-echo <<<EOP
+?>
 <html lang="ja">
 <head>
-    {$_conf['meta_charset_ht']}
+    <?php echo $_conf['meta_charset_ht']; ?>
     <meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
     <meta http-equiv="Content-Style-Type" content="text/css">
     <meta http-equiv="Content-Script-Type" content="text/javascript">
@@ -106,9 +106,8 @@ echo <<<EOP
 <style type="text/css" media="screen">@import "./iui/iui.css";
 body{background:url(iui/pinstripes.png)}input,select {float: right;}
 </style>
-    <title>{$ptitle}</title>\n
-EOP;
-
+    <title><?php eh($ptitle); ?></title>
+<?php
 
 echo <<<EOP
 </head>
@@ -122,20 +121,20 @@ EOP;
 
 
 $htm['form_submit'] = <<<EOP
-    <input class="whiteButton" type="submit" name="submit_save" value="変更を保存する">\n<br clear="right">
+<input class="whiteButton" type="submit" name="submit_save" value="変更を保存する">\n<br clear="right">
+<input class="whiteButton" type="submit" name="submit_default" value="デフォルトに戻す" onClick="if (!window.confirm('ユーザ設定をデフォルトに戻してもよろしいですか？（やり直しはできません）')) {return false;}">
 EOP;
 
 
 P2Util::printInfoHtml();
 
-echo <<<EOP
-<form method="POST" action="{$_SERVER['SCRIPT_NAME']}" target="_self">
-    <input type="hidden" name="csrfid" value="{$csrfid}">\n
-    {$_conf['k_input_ht']}
-EOP;
+?>
+<form method="POST" action="<?php eh($_SERVER['SCRIPT_NAME']); ?>" target="_self">
+    <input type="hidden" name="csrfid" value="<?php eh($csrfid); ?>">
+    <?php echo P2View::getInputHiddenKTag(); ?>
+<?php
 
-echo $htm['form_submit'];
-
+echo $htm['form_submit'] . '<br><br>';
 
 
 echo getGroupSepaHtml('be.2ch.net アカウント');
@@ -162,93 +161,108 @@ echo getGroupSepaHtml('subject');
 
 echo getEditConfHtml('refresh_time', 'スレッド一覧の自動更新間隔 (分指定。0なら自動更新しない)');
 
-echo getEditConfHtml('sb_show_motothre', 'スレッド一覧で未取得スレに対して元スレへのリンク（・）を表示 (する, しない)');
-// echo getEditConfHtml('sb_show_one', 'PC閲覧時、スレッド一覧（板表示）で>>1を表示 (する, しない, ニュース系のみ)');
-echo getEditConfHtml('k_sb_show_first', 'iPhoneのスレッド一覧（板表示）から初めてのスレを開く時の表示方法 (ﾌﾟﾚﾋﾞｭｰ>>1, 1からN件表示, 最新N件表示)');
-echo getEditConfHtml('sb_show_spd', 'スレッド一覧ですばやさ（レス間隔）を表示 (する, しない)');
-echo getEditConfHtml('sb_show_ikioi', 'スレッド一覧で勢い（1日あたりのレス数）を表示 (する, しない)');
-echo getEditConfHtml('sb_show_fav', 'スレッド一覧でお気にスレマーク★を表示 (する, しない)');
+echo getEditConfHtml('sb_show_motothre', 'スレッド一覧で未取得スレに対して元スレへのリンク（・）を表示');
+echo getEditConfHtml('sb_show_one', 'PC閲覧時、スレッド一覧（板表示）で>>1を表示');
+echo getEditConfHtml('k_sb_show_first', '携帯のスレッド一覧（板表示）から初めてのスレを開く時の表示方法');
+echo getEditConfHtml('sb_show_spd', 'スレッド一覧ですばやさ（レス間隔）を表示');
+echo getEditConfHtml('sb_show_ikioi', 'スレッド一覧で勢い（1日あたりのレス数）を表示');
+echo getEditConfHtml('sb_show_fav', 'スレッド一覧でお気にスレマーク★を表示');
 echo getEditConfHtml('sb_sort_ita', '板表示のスレッド一覧でのデフォルトのソート指定');
-echo getEditConfHtml('sort_zero_adjust', '新着ソートでの「既得なし」の「新着数ゼロ」に対するソート優先順位 (上位, 混在, 下位)');
-echo getEditConfHtml('cmp_dayres_midoku', '勢いソート時に新着レスのあるスレを優先 (する, しない)');
-echo getEditConfHtml('k_sb_disp_range', 'iPhone閲覧時、一度に表示するスレの数');
-echo getEditConfHtml('viewall_kitoku', '既得スレは表示件数に関わらず表示 (する, しない)');
+echo getEditConfHtml('sort_zero_adjust', '新着ソートでの「既得なし」の「新着数ゼロ」に対するソート優先順位');
+echo getEditConfHtml('cmp_dayres_midoku', '勢いソート時に新着レスのあるスレを優先');
+echo getEditConfHtml('k_sb_disp_range', '携帯閲覧時、一度に表示するスレの数');
+echo getEditConfHtml('viewall_kitoku', '既得スレは表示件数に関わらず表示');
 
 echo getGroupSepaHtml('read');
 
 echo getEditConfHtml('respointer', 'スレ内容表示時、未読の何コ前のレスにポインタを合わせるか');
-//echo getEditConfHtml('before_respointer', 'PC閲覧時、ポインタの何コ前のレスから表示するか');
+echo getEditConfHtml('before_respointer', 'PC閲覧時、ポインタの何コ前のレスから表示するか');
 echo getEditConfHtml('before_respointer_new', '新着まとめ読みの時、ポインタの何コ前のレスから表示するか');
 echo getEditConfHtml('rnum_all_range', '新着まとめ読みで一度に表示するレス数');
-echo getEditConfHtml('preview_thumbnail', '画像URLの先読みサムネイルを表示（する, しない)');
+echo getEditConfHtml('preview_thumbnail', '画像URLの先読みサムネイルを表示');
 echo getEditConfHtml('pre_thumb_limit', '画像URLの先読みサムネイルを一度に表示する制限数');
 //echo getEditConfHtml('preview_thumbnail', '画像サムネイルの縦の大きさを指定 (ピクセル)');
 ////echo getEditConfHtml('pre_thumb_width', '画像サムネイルの横の大きさを指定 (ピクセル)');
-//echo getEditConfHtml('link_youtube', 'YouTubeのリンクをプレビュー表示（する, しない)');
-//echo getEditConfHtml('link_niconico', 'ニコニコ動画のリンクをプレビュー表示（する, しない)');
-echo getEditConfHtml('iframe_popup', 'HTMLポップアップ (する, しない, pでする, 画像でする)');
+echo getEditConfHtml('link_youtube', 'YouTubeのリンクをプレビュー表示');
+echo getEditConfHtml('link_niconico', 'ニコニコ動画のリンクをプレビュー表示');
+echo getEditConfHtml('link_yourfilehost', 'YourFileHost動画のURLにダウンロード用リンクを付加');
+echo getEditConfHtml('show_be_icon', '2chのBEアイコンを表示');
+echo getEditConfHtml('iframe_popup', 'HTMLポップアップ');
 //echo getEditConfHtml('iframe_popup_delay', 'HTMLポップアップの表示遅延時間 (秒)');
-echo getEditConfHtml('flex_idpopup', 'スレ内で同じ ID:xxxxxxxx があれば、IDフィルタ用のリンクに変換 (する, しない)');
-echo getEditConfHtml('ext_win_target', '外部サイト等へジャンプする時に開くウィンドウのターゲット名 (同窓:"", 新窓:"_blank")');
-echo getEditConfHtml('bbs_win_target', 'p2対応BBSサイト内でジャンプする時に開くウィンドウのターゲット名 (同窓:"", 新窓:"_blank")');
-//echo getEditConfHtml('bottom_res_form', 'スレッド下部に書き込みフォームを表示 (マウスオーバーでする, 常にする, しない)');
-echo getEditConfHtml('quote_res_view', '引用レスを表示 (する, しない)');
+echo getEditConfHtml('flex_idpopup', 'スレ内で同じ ID:xxxxxxxx があれば、IDフィルタ用のリンクに変換');
+echo getEditConfHtml('ext_win_target', '外部サイト等へジャンプする時に開くウィンドウのターゲット名');
+echo getEditConfHtml('bbs_win_target', 'p2対応BBSサイト内でジャンプする時に開くウィンドウのターゲット名');
+echo getEditConfHtml('bottom_res_form', 'スレッド下部に書き込みフォームを表示');
+echo getEditConfHtml('quote_res_view', '引用レスを表示');
 
-if (!$_conf['ktai']) {
-    echo getEditConfHtml('enable_headbar', 'PC ヘッドバーを表示 (する, しない)');
-    echo getEditConfHtml('enable_spm', 'レス番号からスマートポップアップメニュー(SPM)を表示 (する, しない)');
-    //echo getEditConfHtml('spm_kokores', 'スマートポップアップメニューで「これにレス」を表示');
-}
+echo getEditConfHtml('enable_headbar', 'PC ヘッドバーを表示');
+echo getEditConfHtml('enable_spm', 'レス番号からスマートポップアップメニュー(SPM)を表示');
+//echo getEditConfHtml('spm_kokores', 'スマートポップアップメニューで「これにレス」を表示');
+
 
 echo getEditConfHtml('k_rnum_range', '携帯閲覧時、一度に表示するレスの数');
-echo getEditConfHtml('ktai_res_size', '携帯閲覧時、一つのレスの最大表示サイズ');
+echo getEditConfHtml('ktai_res_size', '携帯閲覧時、一つのレスの最大表示サイズ（0なら省略しない）');
 echo getEditConfHtml('ktai_ryaku_size', '携帯閲覧時、レスを省略したときの表示サイズ');
 echo getEditConfHtml('k_aa_ryaku_size', '携帯閲覧時、AAらしきレスを省略するサイズ（0なら省略しない）');
 echo getEditConfHtml('before_respointer_k', '携帯閲覧時、ポインタの何コ前のレスから表示するか');
-echo getEditConfHtml('k_use_tsukin', '携帯閲覧時、外部リンクに(窓)を利用(する, しない)');
-echo getEditConfHtml('k_use_picto', '携帯閲覧時、画像リンクにpic.to(ﾋﾟ)を利用(する, しない)');
+echo getEditConfHtml('k_use_tsukin', '携帯閲覧時、外部リンクに通勤ブラウザ(通)を利用');
+echo getEditConfHtml('k_use_picto', '携帯閲覧時、画像リンクにpic.to(ﾋﾟ)を利用');
 
-echo getEditConfHtml('k_bbs_noname_name', '携帯閲覧時、デフォルトの名無し名を表示（する, しない）');
-echo getEditConfHtml('k_clip_unique_id', '携帯閲覧時、重複しないIDは末尾のみの省略表示（する, しない）');
-echo getEditConfHtml('k_date_zerosuppress', '携帯閲覧時、日付の0を省略表示（する, しない）');
-echo getEditConfHtml('k_clip_time_sec', '携帯閲覧時、時刻の秒を省略表示（する, しない）');
-echo getEditConfHtml('mobile.id_underline', '携帯閲覧時、ID末尾の"O"（オー）に下線を追加（する, しない）');
-echo getEditConfHtml('k_copy_divide_len', '携帯観覧時、「写」のコピー用テキストボックスを分割する文字数');
+echo getEditConfHtml('k_motothre_template', '携帯閲覧時、元スレURLのカスタマイズ指定');
+echo getEditConfHtml('k_motothre_external', '携帯閲覧時、元スレURLのカスタマイズ指定を外部板でも有効にする');
+
+echo getEditConfHtml('k_bbs_noname_name', '携帯閲覧時、デフォルトの名無し名を表示');
+echo getEditConfHtml('k_clip_unique_id', '携帯閲覧時、重複しないIDは末尾のみの省略表示');
+echo getEditConfHtml('k_date_zerosuppress', '携帯閲覧時、日付の0を省略表示');
+echo getEditConfHtml('k_clip_time_sec', '携帯閲覧時、時刻の秒を省略表示');
+echo getEditConfHtml('mobile.id_underline', '携帯閲覧時、ID末尾の"O"（オー）に下線を追加');
+echo getEditConfHtml('k_copy_divide_len', '携帯閲覧時、「写」のコピー用テキストボックスを分割する文字数');
+
+echo getEditConfHtml('read_k_thread_title_color', '携帯閲覧時、スレッドタイトル色（HTMLカラー 例:"#1144aa"）');
+echo getEditConfHtml('k_bgcolor', '携帯閲覧時、基本背景色（HTMLカラー）');
+echo getEditConfHtml('k_color', '携帯閲覧時、基本テキスト色（HTMLカラー）');
+echo getEditConfHtml('k_acolor', '携帯閲覧時、基本リンク色（HTMLカラー）');
+echo getEditConfHtml('k_acolor_v', '携帯閲覧時、基本訪問済みリンク色（HTMLカラー）');
+echo getEditConfHtml('k_post_msg_cols', '携帯閲覧時、書き込みフォームの横幅');
+echo getEditConfHtml('k_post_msg_rows', '携帯閲覧時、書き込みフォームの高さ');
 
 echo getGroupSepaHtml('ETC');
+
+echo getEditConfHtml('frame_menu_width', 'フレーム左 板メニュー の表示幅');
+echo getEditConfHtml('frame_subject_width', 'フレーム右上 スレ一覧 の表示幅');
+echo getEditConfHtml('frame_read_width', 'フレーム右下 スレ本文 の表示幅');
 
 echo getEditConfHtml('my_FROM', 'レス書き込み時のデフォルトの名前');
 echo getEditConfHtml('my_mail', 'レス書き込み時のデフォルトのmail');
 
-//echo getEditConfHtml('editor_srcfix', 'PC閲覧時、ソースコードのコピペに適した補正をするチェックボックスを表示（する, しない, pc鯖のみ）');
+echo getEditConfHtml('editor_srcfix', 'PC閲覧時、ソースコードのコピペに適した補正をするチェックボックスを表示');
 
 echo getEditConfHtml('get_new_res', '新しいスレッドを取得した時に表示するレス数(全て表示する場合:"all")');
 echo getEditConfHtml('rct_rec_num', '最近読んだスレの記録数');
 echo getEditConfHtml('res_hist_rec_num', '書き込み履歴の記録数');
-echo getEditConfHtml('res_write_rec', '書き込み内容ログを記録(する, しない)');
-echo getEditConfHtml('through_ime', '外部URLジャンプする際に通すゲート (直接:"", p2 ime(自動転送):"p2", p2 ime(手動転送):"p2m", p2 ime(pのみ手動転送):"p2pm")');
-echo getEditConfHtml('join_favrank', '<a href="http://akid.s17.xrea.com/favrank/favrank.html" target="_blank">お気にスレ共有</a>に参加(する, しない)');
-echo getEditConfHtml('enable_menu_new', '板メニューに新着数を表示 (する:1, しない:0, お気に板のみ:2)');
+echo getEditConfHtml('res_write_rec', '書き込み内容ログを記録');
+echo getEditConfHtml('through_ime', '外部URLジャンプする際に通すゲート');
+echo getEditConfHtml('join_favrank', '<a href="http://akid.s17.xrea.com/favrank/favrank.html" target="_blank">お気にスレ共有</a>に参加');
+echo getEditConfHtml('enable_menu_new', '板メニューに新着数を表示');
 echo getEditConfHtml('menu_refresh_time', '板メニュー部分の自動更新間隔 (分指定。0なら自動更新しない。)');
 echo getEditConfHtml('mobile.match_color', '携帯閲覧時、フィルタリングでマッチしたキーワードの色');
-echo getEditConfHtml('k_save_packet', '携帯閲覧時、パケット量を減らすため、全角英数・カナ・スペースを半角に変換 (する, しない)');
+echo getEditConfHtml('k_save_packet', '携帯閲覧時、パケット量を減らすため、全角英数・カナ・スペースを半角に変換');
 echo getEditConfHtml('ngaborn_daylimit', 'この期間、NGあぼーんにHITしなければ、登録ワードを自動的に外す（日数）');
-echo getEditConfHtml('proxy_use', 'プロキシを利用 (する, しない)'); 
+echo getEditConfHtml('proxy_use', 'プロキシを利用'); 
 echo getEditConfHtml('proxy_host', 'プロキシホスト ex)"127.0.0.1", "www.p2proxy.com"'); 
 echo getEditConfHtml('proxy_port', 'プロキシポート ex)"8080"'); 
 echo getEditConfHtml('precede_openssl', '●ログインを、まずはopensslで試みる。※PHP 4.3.0以降で、OpenSSLが静的にリンクされている必要がある。');
-echo getEditConfHtml('precede_phpcurl', 'curlを使う時、コマンドライン版とPHP関数版どちらを優先するか (コマンドライン版:0, PHP関数版:1)');
+echo getEditConfHtml('precede_phpcurl', 'curlを使う時、コマンドライン版とPHP関数版どちらを優先するか');
 
 
 
 echo $htm['form_submit'];
 
-
-echo '</form>' . "\n";
-
-
-echo '</body></html>';
-
+?>
+</form>
+</body>
+</html>
+<?php
 exit;
 
 
@@ -366,6 +380,19 @@ function getEditConfHtml($name, $description_ht)
     // デフォルト値の規定がなければ、空白を返す
     if (!isset($conf_user_def[$name])) {
         return '';
+    }
+    // 携帯では編集表示しない項目
+    if ($_conf['ktai']) {
+        $noKtais = array(
+            'enable_headbar', 'enable_spm', 'spm_kokores',
+            'frame_menu_width', 'frame_subject_width', 'frame_read_width'
+        );
+        if (in_array($name, $noKtais)) {
+            return sprintf(
+                '<input type="hidden" name="conf_edit[%s]" value="%s">' . "\n",
+                hs($name), hs($_conf[$name])
+            );
+        }
     }
 
     $name_view = $_conf[$name];

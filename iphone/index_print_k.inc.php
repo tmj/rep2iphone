@@ -78,7 +78,7 @@ setTimeout(scrollTo, 100, 0, 1);
 <body>
     <div class="toolbar">
 <h1 id="pageTitle">{$ptitle}</h1>
-    <a class="button" href="edit_indexmenuk.php{$user_at_q}{$_conf['k_at_a']}">•À‘Ö</a>
+    <a class="button" href="edit_indexmenui.php{$user_at_q}{$_conf['k_at_a']}">•À‘Ö</a>
     </div>
     <ul id="home">
     <li class="group">ƒƒjƒ…[</li>
