@@ -161,6 +161,20 @@ class ShowThreadK extends ShowThread
         $date_id    = $resar[2];
         $msg        = $resar[3];
 
+        //iphone 引用してレス
+        //できれば埋め込みしないでアクションがあったときに呼び出したい
+		/* -- 追加ここから -- */
+		$quoteMsg = $msg;
+
+        $matches = null;
+		if(preg_match("/(.*)<a href\=\".+\" target=\"_blank\">(\&gt;)*([0-9]{1,4})<\/a>([\\x00-\\xff]+)/im",$msg,$matches)){
+			$quoteMsg = $matches[1]."&gt;&gt;".$matches[3].$matches[4];
+		}
+
+		// タグ化＆改行にマークしとく
+		$quoteMsg = "\r\n<span class=\"respopup\" id=\"quote_msg".$i."\">".str_replace("<br>","___[br]___&gt;",nl2br($quoteMsg))."</span>\r\n";
+		/* -- 追加 いったんここまで 次 return句まで移動 -- */
+
 		if (!empty($this->BBS_NONAME_NAME) and $this->BBS_NONAME_NAME == $name) {
             $name = '';
         }
@@ -998,7 +1012,9 @@ $r = $ext_pre . '<a href="' . $in_url . '">' . $s[2] . '</a>';
 
         $read_url = "{$_conf['read_php']}?host={$this->thread->host}&bbs={$this->thread->bbs}&key={$this->thread->key}&offline=1&ls={$appointed_num}&b={$_conf['b']}";
         $read_url_hs = hs($read_url);
-        return "<a href=\"{$read_url_hs}\">{$qsign}{$appointed_num}</a>";
+        //iPhone　レスポップアップ用に追加
+        $read_on_rpop .= " onmouseover=\"showResPopUp('q{$qnum}of{$this->thread->key}',event)\"";
+        return "<a href=\"{$read_url_hs}\"{$read_on_rpop}>{$qsign}{$appointed_num}</a>";
     }
 
     /**

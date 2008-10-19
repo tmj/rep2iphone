@@ -49,7 +49,7 @@ $_conf['menuKIni'] = array(
         'ƒXƒŒ‚Ì“a“°'
     ),
     'setting'           => array(
-        'setting_i.php?dummy=1',
+        'setting.php?dummy=1',
         'ƒƒOƒCƒ“ŠÇ—'
     ),
     'editpref'          => array(
